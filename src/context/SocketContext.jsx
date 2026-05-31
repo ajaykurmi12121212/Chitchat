@@ -3,7 +3,8 @@ import { io } from 'socket.io-client'
 import { useAuth } from './AuthContext'
 
 const SocketCtx = createContext()
-const URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
+
+const URL = 'https://chitchat-backend-production-1f6e.up.railway.app'
 
 export function SocketProvider({ children }) {
   const { user }  = useAuth()
