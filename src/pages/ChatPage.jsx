@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useSocket } from '../context/SocketContext'
 import { useTheme } from '../context/ThemeContext'
 import { Icon, IBtn } from '../components/Icons'
+
+const BACKEND = 'https://chitchat-backend-production-1f6e.up.railway.app'
 
 const fmt = (d) => {
   if (!d) return ''
@@ -82,19 +84,23 @@ function Bubble({ msg, isMine, showName, onReply, onDelete }) {
             : msg.type === 'text'
             ? <p style={{ fontSize:13.5, lineHeight:1.55, color:'var(--text)', whiteSpace:'pre-wrap' }}>{msg.content}</p>
             : msg.type === 'image'
-            ? <div style={{ width:200, borderRadius:10, overflow:'hidden', cursor:'pointer' }}>
+            ? <div style={{ width:200, borderRadius:10, overflow:'hidden', cursor:'pointer' }} onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')}>
                 {msg.fileUrl
                   ? <img src={msg.fileUrl} alt="" style={{ width:'100%', maxHeight:180, objectFit:'cover' }}/>
                   : <div style={{ height:150, background:'var(--s3)', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon.Gallery width={44} height={44} style={{ color:'var(--muted2)' }}/></div>}
                 {msg.content && <p style={{ fontSize:13, padding:'6px 10px', color:'var(--text)' }}>{msg.content}</p>}
               </div>
             : msg.type === 'video'
-            ? <div style={{ width:200, borderRadius:10, overflow:'hidden', cursor:'pointer', background:'var(--s3)', height:150, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8 }}>
-                <Icon.Video width={40} height={40} style={{ color:'var(--muted2)' }}/>
-                <span style={{ fontSize:11, color:'var(--muted)', fontWeight:600 }}>Video</span>
+            ? <div style={{ width:220, borderRadius:10, overflow:'hidden' }}>
+                {msg.fileUrl
+                  ? <video src={msg.fileUrl} controls style={{ width:'100%', maxHeight:180, borderRadius:10 }}/>
+                  : <div style={{ height:150, background:'var(--s3)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8 }}>
+                      <Icon.Video width={40} height={40} style={{ color:'var(--muted2)' }}/>
+                      <span style={{ fontSize:11, color:'var(--muted)', fontWeight:600 }}>Video</span>
+                    </div>}
               </div>
             : msg.type === 'document'
-            ? <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:190, background:'var(--s2)', borderRadius:10, padding:10, border:'.5px solid var(--border)' }}>
+            ? <div onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')} style={{ display:'flex', alignItems:'center', gap:10, minWidth:190, background:'var(--s2)', borderRadius:10, padding:10, border:'.5px solid var(--border)', cursor:'pointer' }}>
                 <div style={{ width:38, height:38, borderRadius:9, background:'rgba(34,197,94,.1)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <Icon.Doc width={20} height={20} style={{ color:'#22c55e' }}/>
                 </div>
@@ -105,7 +111,7 @@ function Bubble({ msg, isMine, showName, onReply, onDelete }) {
                 <Icon.Down width={16} height={16} style={{ color:'#22c55e' }}/>
               </div>
             : (msg.type === 'voice' || msg.type === 'audio')
-            ? <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:190, cursor:'pointer' }}>
+            ? <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:190, cursor:'pointer' }} onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')}>
                 <div style={{ width:36, height:36, borderRadius:'50%', background:'#22c55e', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <Icon.Play width={13} height={13} style={{ color:'#fff', marginLeft:2 }}/>
                 </div>
@@ -172,17 +178,44 @@ function Bubble({ msg, isMine, showName, onReply, onDelete }) {
 
 function AttachMenu({ onSend, onClose }) {
   const fileRef = useRef()
+  const [uploading, setUploading] = useState(false)
   const opts = [
     { icon: Icon.Gallery, label:'Photo',    accept:'image/*',                   type:'image',    bg:'rgba(96,165,250,.12)',  color:'#60a5fa' },
     { icon: Icon.Video,   label:'Video',    accept:'video/*',                   type:'video',    bg:'rgba(168,85,247,.12)',  color:'#a855f7' },
     { icon: Icon.Doc,     label:'Document', accept:'.pdf,.doc,.docx,.txt,.xlsx', type:'document', bg:'rgba(34,197,94,.1)',    color:'#22c55e' },
     { icon: Icon.Mic,     label:'Audio',    accept:'audio/*',                   type:'audio',    bg:'rgba(239,68,68,.1)',    color:'#ef4444' },
   ]
+
+  const uploadFile = async (f, type) => {
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', f)
+      const token = localStorage.getItem('cc_token')
+      const res = await fetch(`${BACKEND}/api/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form
+      })
+      const data = await res.json()
+      onSend({ type, fileUrl: data.fileUrl, fileName: data.fileName, fileSize: data.fileSize, content: '' })
+    } catch {
+      onSend({ type, fileUrl: URL.createObjectURL(f), fileName: f.name, fileSize: `${Math.round(f.size/1024)} KB`, content: '' })
+    }
+    setUploading(false)
+    onClose()
+  }
+
   return (
     <div style={{ position:'absolute', bottom:66, left:12, background:'var(--card)', border:'.5px solid var(--border)', borderRadius:18, padding:8, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2, boxShadow:'var(--shadow)', zIndex:10, minWidth:220 }}>
+      {uploading && (
+        <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.5)', borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center', zIndex:5 }}>
+          <div style={{ width:28, height:28, border:'3px solid rgba(34,197,94,.2)', borderTopColor:'#22c55e', borderRadius:'50%', animation:'spin .7s linear infinite' }}/>
+        </div>
+      )}
       {opts.map(o => (
         <button key={o.label}
-          onClick={() => { fileRef.current._type = o.type; fileRef.current.accept = o.accept; fileRef.current.click(); onClose() }}
+          onClick={() => { fileRef.current._type = o.type; fileRef.current.accept = o.accept; fileRef.current.click() }}
           style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:7, padding:'11px 10px', borderRadius:12, cursor:'pointer', border:'none', background:'none', fontFamily:'inherit' }}>
           <div style={{ width:46, height:46, borderRadius:'50%', background:o.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
             <o.icon width={22} height={22} style={{ color:o.color }}/>
@@ -204,10 +237,10 @@ function AttachMenu({ onSend, onClose }) {
         </div>
         <span style={{ fontSize:11, color:'var(--muted)', fontWeight:600 }}>Contact</span>
       </button>
-      <input ref={fileRef} type="file" style={{ display:'none' }} onChange={e => {
+      <input ref={fileRef} type="file" style={{ display:'none' }} onChange={async e => {
         const f = e.target.files[0]; if (!f) return
         const type = fileRef.current._type
-        onSend({ type, fileUrl: URL.createObjectURL(f), fileName: f.name, fileSize: `${Math.round(f.size/1024)} KB`, content: '' })
+        await uploadFile(f, type)
         e.target.value = ''
       }}/>
     </div>
@@ -320,27 +353,6 @@ function CallOverlay({ type, chat, user, isOnline, onEnd }) {
   )
 }
 
-function CameraOverlay({ onCapture, onClose }) {
-  return (
-    <div style={{ position:'absolute', inset:0, zIndex:50, background:'#000', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'rgba(0,0,0,.8)', padding:'12px 14px', display:'flex', alignItems:'center', gap:12, borderBottom:'.5px solid rgba(255,255,255,.06)' }}>
-        <button onClick={onClose} style={{ width:36, height:36, borderRadius:10, background:'rgba(255,255,255,.1)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <Icon.Back width={17} height={17} style={{ color:'#fff' }}/>
-        </button>
-        <span style={{ fontSize:15, fontWeight:700, color:'#fff', flex:1 }}>Camera</span>
-      </div>
-      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#080808' }}>
-        <Icon.Camera width={64} height={64} style={{ color:'rgba(255,255,255,.15)' }}/>
-      </div>
-      <div style={{ background:'rgba(0,0,0,.9)', padding:'20px 30px', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <button onClick={onCapture} style={{ width:68, height:68, borderRadius:'50%', background:'#fff', border:'5px solid rgba(255,255,255,.28)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <Icon.Camera width={22} height={22} style={{ color:'#111' }}/>
-        </button>
-      </div>
-    </div>
-  )
-}
-
 function StatusCompose({ user, api, socket, onClose }) {
   const [text, setText] = useState('')
   const [bg, setBg] = useState('linear-gradient(135deg,#16a34a,#22c55e)')
@@ -422,12 +434,19 @@ export default function ChatPage() {
   const [profForm, setProfForm] = useState({ name:'', about:'', phone:'' })
   const [addPhone, setAddPhone] = useState('')
   const [foundUser, setFoundUser] = useState(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   const [showSidebar, setShowSidebar] = useState(true)
 
   const bottomRef = useRef()
   const typingRef = useRef()
   const isDark = theme === 'dark'
-  const isMobile = window.innerWidth <= 768
+
+  // Mobile resize handler
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => { api.get('/chats').then(({ data }) => setChats(data)) }, [])
 
@@ -450,7 +469,6 @@ export default function ChatPage() {
       if (active?._id === msg.chat) setMessages(p => [...p, msg])
       setChats(p => p.map(c => c._id === msg.chat ? { ...c, lastMessage: msg, updatedAt: new Date() } : c)
         .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt)))
-      // Notification
       if (active?._id !== msg.chat && 'Notification' in window && Notification.permission === 'granted') {
         new Notification(msg.sender?.name || 'New Message', { body: msg.content || '📎 Media', icon: '/favicon.ico' })
       }
@@ -477,7 +495,6 @@ export default function ChatPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, remoteType])
 
-  // Request notification permission
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
@@ -623,8 +640,11 @@ export default function ChatPage() {
               <div style={{ fontSize:12, color:'#22c55e', marginTop:3 }}>📞 Incoming · Today</div>
             </div>
             <div style={{ display:'flex', gap:6 }}>
-              <button onClick={() => setOverlay('voice')} style={{ width:34, height:34, borderRadius:'50%', background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <button onClick={() => { setActive(chat); setOverlay('voice') }} style={{ width:34, height:34, borderRadius:'50%', background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
                 <Icon.Call width={15} height={15} style={{ color:'#22c55e' }}/>
+              </button>
+              <button onClick={() => { setActive(chat); setOverlay('video') }} style={{ width:34, height:34, borderRadius:'50%', background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Icon.Video width={15} height={15} style={{ color:'#22c55e' }}/>
               </button>
             </div>
           </div>
@@ -638,15 +658,13 @@ export default function ChatPage() {
       <style>{`
         .msg-menu-btn{opacity:0}
         .mr:hover .msg-menu-btn{opacity:1!important}
-        @media(max-width:768px){
-          .sidebar{ position:absolute!important; left:0; top:0; bottom:0; z-index:30; width:100%!important; }
-          .main-chat{ width:100%!important; }
-        }
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes ww{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.8)}}
       `}</style>
 
       {/* SIDEBAR */}
-      {(showSidebar || !isMobile) && (
-        <div className="sidebar" style={{ width:340, background:'var(--s1)', display:'flex', flexDirection:'column', borderRight:'.5px solid var(--border)', flexShrink:0 }}>
+      {(!isMobile || showSidebar) && (
+        <div style={{ width: isMobile ? '100%' : 340, background:'var(--s1)', display:'flex', flexDirection:'column', borderRight:'.5px solid var(--border)', flexShrink:0, position: isMobile ? 'absolute' : 'relative', inset: isMobile ? 0 : 'auto', zIndex: isMobile ? 30 : 'auto' }}>
 
           {/* Topbar */}
           <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'.5px solid var(--border)' }}>
@@ -722,8 +740,8 @@ export default function ChatPage() {
       )}
 
       {/* MAIN CHAT */}
-      {(!showSidebar || !isMobile) && (
-        <div className="main-chat" style={{ flex:1, display:'flex', flexDirection:'column', background:'var(--bg)', position:'relative', overflow:'hidden' }}>
+      {(!isMobile || !showSidebar) && (
+        <div style={{ flex:1, display:'flex', flexDirection:'column', background:'var(--bg)', position:'relative', overflow:'hidden', width: isMobile ? '100%' : 'auto' }}>
 
           <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(circle, var(--s3) 1px, transparent 1px)', backgroundSize:'24px 24px', opacity:.3, pointerEvents:'none' }}/>
 
@@ -732,7 +750,7 @@ export default function ChatPage() {
               {/* Chat Header */}
               <div style={{ background:'var(--s1)', padding:'10px 14px', display:'flex', alignItems:'center', gap:11, borderBottom:'.5px solid var(--border)', zIndex:2 }}>
                 {isMobile && (
-                  <button onClick={() => setShowSidebar(true)} style={{ width:34, height:34, borderRadius:9, background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <button onClick={() => setShowSidebar(true)} style={{ width:34, height:34, borderRadius:9, background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     <Icon.Back width={16} height={16} style={{ color:'var(--text)' }}/>
                   </button>
                 )}
@@ -809,9 +827,6 @@ export default function ChatPage() {
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMsg())}
                     placeholder="Message..."
                     style={{ flex:1, background:'none', border:'none', outline:'none', fontSize:13.5, color:'var(--text)', fontFamily:'var(--ff)' }}/>
-                  <button onClick={() => setOverlay('camera')} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', alignItems:'center', padding:0, flexShrink:0 }}>
-                    <Icon.Camera width={17} height={17}/>
-                  </button>
                   <button onClick={() => sendMsg({ type:'voice', content:'', duration:`0:${Math.floor(Math.random()*50+5).toString().padStart(2,'0')}` })}
                     style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', alignItems:'center', padding:0, flexShrink:0 }}>
                     <Icon.Mic width={16} height={16}/>
@@ -826,9 +841,6 @@ export default function ChatPage() {
 
               {(overlay === 'voice' || overlay === 'video') && (
                 <CallOverlay type={overlay} chat={active} user={user} isOnline={isOnline} onEnd={() => setOverlay(null)}/>
-              )}
-              {overlay === 'camera' && (
-                <CameraOverlay onCapture={() => { sendMsg({ type:'image', content:'' }); setOverlay(null) }} onClose={() => setOverlay(null)}/>
               )}
             </>
           ) : (
