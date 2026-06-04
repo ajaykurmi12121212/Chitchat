@@ -17,7 +17,6 @@ const fmt = (d) => {
 const timeOnly = (d) => d ? new Date(d).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''
 const getOther = (chat, uid) => chat.members?.find(m => (m._id||m) !== uid) || {}
 const initials = (name='') => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
-
 const GRADS = [
   'linear-gradient(135deg,#6d1b7b,#e91e8c)',
   'linear-gradient(135deg,#1a6b3c,#22c55e)',
@@ -28,17 +27,19 @@ const GRADS = [
 ]
 const gradFor = (name='') => GRADS[name.charCodeAt(0) % GRADS.length]
 
-function Av({ name='?', src, size=44, online, style={} }) {
+function Av({ name='?', src, size=44, online, className='' }) {
+  const s = size
   return (
-    <div style={{ position:'relative', flexShrink:0, ...style }}>
+    <div className={`relative flex-shrink-0 ${className}`} style={{ width:s, height:s }}>
       {src
-        ? <img src={src} alt={name} style={{ width:size, height:size, borderRadius:'50%', objectFit:'cover' }}/>
-        : <div style={{ width:size, height:size, borderRadius:'50%', background:gradFor(name), display:'flex', alignItems:'center', justifyContent:'center', fontSize:size*0.3, fontWeight:800, color:'#fff', letterSpacing:'-.3px' }}>
+        ? <img src={src} alt={name} className="w-full h-full rounded-full object-cover"/>
+        : <div className="w-full h-full rounded-full flex items-center justify-center font-extrabold text-white" style={{ background:gradFor(name), fontSize:s*0.32 }}>
             {initials(name)}
           </div>
       }
       {online !== undefined && (
-        <span style={{ position:'absolute', bottom:1, right:1, width:size*0.25, height:size*0.25, borderRadius:'50%', background: online ? '#22c55e' : 'var(--s3)', border:'2.5px solid var(--s1)', boxShadow: online ? '0 0 6px rgba(34,197,94,.4)' : 'none' }}/>
+        <span className={`absolute bottom-0.5 right-0.5 rounded-full border-2 border-[var(--s1)] ${online ? 'bg-green-500' : 'bg-[var(--s3)]'}`}
+          style={{ width:s*0.27, height:s*0.27 }}/>
       )}
     </div>
   )
@@ -48,122 +49,114 @@ function Bubble({ msg, isMine, showName, onReply, onDelete }) {
   const [menu, setMenu] = useState(false)
   const isDeleted = msg.isDeleted
 
-  const bubStyle = {
-    padding: msg.type === 'text' || isDeleted ? '8px 12px' : '4px',
-    borderRadius: isMine ? '14px 14px 0 14px' : '0 14px 14px 14px',
-    maxWidth: '100%',
-    position: 'relative',
-    background: isMine ? 'var(--out)' : 'var(--in)',
-    border: isMine ? '.5px solid var(--out-border)' : '.5px solid var(--in-border)',
-  }
-
   return (
-    <div style={{ display:'flex', alignItems:'flex-end', gap:4, marginBottom:2, flexDirection: isMine ? 'row-reverse' : 'row' }}
+    <div className={`flex items-end gap-1 mb-0.5 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
       onMouseLeave={() => setMenu(false)}>
       {!isMine && (
         showName
-          ? <div style={{ width:24, height:24, borderRadius:'50%', background:gradFor(msg.sender?.name||'?'), display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:800, color:'#fff', flexShrink:0, marginBottom:4 }}>
+          ? <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-black flex-shrink-0 mb-1" style={{ background:gradFor(msg.sender?.name||'?'), fontSize:8 }}>
               {initials(msg.sender?.name)}
             </div>
-          : <div style={{ width:24, flexShrink:0 }}/>
+          : <div className="w-6 flex-shrink-0"/>
       )}
 
-      <div style={{ display:'flex', flexDirection:'column', alignItems: isMine ? 'flex-end' : 'flex-start', maxWidth:'78%' }}>
+      <div className={`flex flex-col max-w-[78%] ${isMine ? 'items-end' : 'items-start'}`}>
         {showName && !isMine && !isDeleted && (
-          <span style={{ fontSize:10, fontWeight:700, color:'#22c55e', marginBottom:3, marginLeft:2 }}>{msg.sender?.name}</span>
+          <span className="text-[10px] font-bold text-green-500 mb-1 ml-1">{msg.sender?.name}</span>
         )}
         {msg.replyTo && !isDeleted && (
-          <div style={{ borderLeft:'3px solid #22c55e', paddingLeft:8, marginBottom:3, background:'rgba(34,197,94,.06)', borderRadius:'0 6px 6px 0', padding:'4px 8px', maxWidth:'100%' }}>
-            <div style={{ fontSize:10, fontWeight:700, color:'#22c55e' }}>{msg.replyTo.sender?.name || 'Message'}</div>
-            <div style={{ fontSize:10, color:'var(--muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:160 }}>{msg.replyTo.content || '📎 Media'}</div>
+          <div className="border-l-2 border-green-500 pl-2 mb-1 bg-green-500/5 rounded-r-md px-2 py-1 max-w-full">
+            <div className="text-[10px] font-bold text-green-500">{msg.replyTo.sender?.name || 'Message'}</div>
+            <div className="text-[10px] text-[var(--muted)] truncate max-w-[160px]">{msg.replyTo.content || '📎 Media'}</div>
           </div>
         )}
-        <div style={bubStyle}>
+
+        <div className={`relative max-w-full ${isDeleted || msg.type==='text' ? 'px-3 py-2' : 'p-1'} ${isMine ? 'rounded-[14px_14px_0_14px] bg-[var(--out)] border border-[var(--out-border)]' : 'rounded-[0_14px_14px_14px] bg-[var(--in)] border border-[var(--in-border)]'}`}>
           {isDeleted
-            ? <p style={{ fontSize:12, fontStyle:'italic', color:'var(--muted)' }}>🚫 Deleted</p>
+            ? <p className="text-xs italic text-[var(--muted)]">🚫 Deleted</p>
             : msg.type === 'text'
-            ? <p style={{ fontSize:14, lineHeight:1.5, color:'var(--text)', whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{msg.content}</p>
+            ? <p className="text-sm leading-relaxed text-[var(--text)] break-words whitespace-pre-wrap">{msg.content}</p>
             : msg.type === 'image'
-            ? <div style={{ width:'100%', maxWidth:240, borderRadius:10, overflow:'hidden', cursor:'pointer' }} onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')}>
+            ? <div className="w-[220px] rounded-xl overflow-hidden cursor-pointer" onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')}>
                 {msg.fileUrl
-                  ? <img src={msg.fileUrl} alt="" style={{ width:'100%', maxHeight:200, objectFit:'cover', display:'block' }}/>
-                  : <div style={{ height:120, background:'var(--s3)', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon.Gallery width={36} height={36} style={{ color:'var(--muted2)' }}/></div>}
-                {msg.content && <p style={{ fontSize:12, padding:'4px 8px', color:'var(--text)' }}>{msg.content}</p>}
+                  ? <img src={msg.fileUrl} alt="" className="w-full max-h-[200px] object-cover block"/>
+                  : <div className="h-28 bg-[var(--s3)] flex items-center justify-center"><Icon.Gallery className="w-9 h-9 text-[var(--muted2)]"/></div>}
+                {msg.content && <p className="text-xs px-2 py-1 text-[var(--text)]">{msg.content}</p>}
               </div>
             : msg.type === 'video'
-            ? <div style={{ width:'100%', maxWidth:240, borderRadius:10, overflow:'hidden' }}>
+            ? <div className="w-[220px] rounded-xl overflow-hidden">
                 {msg.fileUrl
-                  ? <video src={msg.fileUrl} controls style={{ width:'100%', maxHeight:180, display:'block' }}/>
-                  : <div style={{ height:120, background:'var(--s3)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:6 }}>
-                      <Icon.Video width={32} height={32} style={{ color:'var(--muted2)' }}/>
+                  ? <video src={msg.fileUrl} controls className="w-full max-h-[180px] block"/>
+                  : <div className="h-28 bg-[var(--s3)] flex items-center justify-center flex-col gap-2">
+                      <Icon.Video className="w-8 h-8 text-[var(--muted2)]"/>
                     </div>}
               </div>
             : msg.type === 'document'
-            ? <div onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')} style={{ display:'flex', alignItems:'center', gap:8, minWidth:160, background:'var(--s2)', borderRadius:10, padding:8, border:'.5px solid var(--border)', cursor:'pointer' }}>
-                <div style={{ width:34, height:34, borderRadius:8, background:'rgba(34,197,94,.1)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <Icon.Doc width={18} height={18} style={{ color:'#22c55e' }}/>
+            ? <div onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')} className="flex items-center gap-2 min-w-[160px] bg-[var(--s2)] rounded-xl p-2 border border-[var(--border)] cursor-pointer">
+                <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                  <Icon.Doc className="w-5 h-5 text-green-500"/>
                 </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:12, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', color:'var(--text)' }}>{msg.fileName || 'Document'}</div>
-                  <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>{msg.fileSize || ''}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold truncate text-[var(--text)]">{msg.fileName || 'Document'}</div>
+                  <div className="text-[10px] text-[var(--muted)] mt-0.5">{msg.fileSize || ''}</div>
                 </div>
               </div>
             : (msg.type === 'voice' || msg.type === 'audio')
-            ? <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:160, cursor:'pointer' }} onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')}>
-                <div style={{ width:32, height:32, borderRadius:'50%', background:'#22c55e', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <Icon.Play width={12} height={12} style={{ color:'#fff', marginLeft:2 }}/>
+            ? <div className="flex items-center gap-2 min-w-[160px] cursor-pointer" onClick={() => msg.fileUrl && window.open(msg.fileUrl,'_blank')}>
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                  <Icon.Play className="w-3 h-3 text-white ml-0.5"/>
                 </div>
-                <div style={{ flex:1, display:'flex', alignItems:'center', gap:2, height:20 }}>
+                <div className="flex items-center gap-0.5 h-5 flex-1">
                   {Array.from({length:10},(_,i) => (
-                    <div key={i} style={{ width:2, borderRadius:2, background:'#22c55e', height:Math.random()*14+3 }}/>
+                    <div key={i} className="w-0.5 rounded bg-green-500" style={{ height:Math.random()*14+3 }}/>
                   ))}
                 </div>
-                <span style={{ fontSize:10, color:'var(--muted)', fontWeight:500 }}>{msg.duration || '0:00'}</span>
+                <span className="text-[10px] text-[var(--muted)] font-medium">{msg.duration || '0:00'}</span>
               </div>
             : msg.type === 'location'
-            ? <div style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer' }}>
-                <Icon.Loc width={14} height={14} style={{ color:'#22c55e', flexShrink:0 }}/>
+            ? <div className="flex items-center gap-2 cursor-pointer">
+                <Icon.Loc className="w-4 h-4 text-green-500 flex-shrink-0"/>
                 <div>
-                  <div style={{ fontSize:12, fontWeight:600, color:'var(--text)' }}>Location</div>
-                  <div style={{ fontSize:10, color:'var(--muted)' }}>{msg.content || 'Tap to view'}</div>
+                  <div className="text-xs font-semibold text-[var(--text)]">Location</div>
+                  <div className="text-[10px] text-[var(--muted)]">{msg.content}</div>
                 </div>
               </div>
-            : <p style={{ fontSize:14, color:'var(--text)' }}>{msg.content}</p>
+            : <p className="text-sm text-[var(--text)]">{msg.content}</p>
           }
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:3, marginTop:2 }}>
-            <span style={{ fontSize:10, color:'var(--muted)', fontWeight:500 }}>{timeOnly(msg.createdAt)}</span>
+          <div className="flex items-center justify-end gap-1 mt-1">
+            <span className="text-[10px] text-[var(--muted)] font-medium">{timeOnly(msg.createdAt)}</span>
             {isMine && !isDeleted && (
               msg.readBy?.length > 1
-                ? <Icon.DCheck width={12} height={12} style={{ color:'var(--blue)' }}/>
-                : <Icon.Check width={11} height={11} style={{ color:'var(--muted)' }}/>
+                ? <Icon.DCheck className="w-3 h-3 text-blue-400"/>
+                : <Icon.Check className="w-3 h-3 text-[var(--muted)]"/>
             )}
           </div>
         </div>
+
         {msg.reactions?.length > 0 && (
-          <div style={{ display:'flex', gap:3, marginTop:3 }}>
-            {msg.reactions.map((r,i) => <span key={i} style={{ fontSize:12, background:'var(--s2)', borderRadius:20, padding:'1px 5px', border:'.5px solid var(--border)' }}>{r.emoji}</span>)}
+          <div className="flex gap-1 mt-1">
+            {msg.reactions.map((r,i) => <span key={i} className="text-xs bg-[var(--s2)] rounded-full px-1.5 py-0.5 border border-[var(--border)]">{r.emoji}</span>)}
           </div>
         )}
       </div>
 
-      <div style={{ position:'relative', flexShrink:0 }}>
+      <div className="relative flex-shrink-0">
         <button onClick={() => setMenu(m=>!m)}
-          style={{ opacity: menu ? 1 : 0, width:22, height:22, borderRadius:5, background:'none', border:'none', cursor:'pointer', color:'var(--muted)', transition:'opacity .15s', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12 }}
-          className="msg-menu-btn">▾</button>
+          className="msg-menu-btn opacity-0 w-6 h-6 rounded bg-none border-none cursor-pointer text-[var(--muted)] flex items-center justify-center text-xs">▾</button>
         {menu && (
-          <div style={{ position:'absolute', [isMine?'right':'left']:0, top:'100%', background:'var(--card)', border:'.5px solid var(--border)', borderRadius:12, overflow:'hidden', boxShadow:'var(--shadow)', zIndex:20, minWidth:130 }}>
-            <div style={{ display:'flex', gap:2, padding:'6px 8px', borderBottom:'.5px solid var(--border)' }}>
+          <div className={`absolute top-full ${isMine ? 'right-0' : 'left-0'} bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-lg z-20 min-w-[130px]`}>
+            <div className="flex gap-1 p-2 border-b border-[var(--border)]">
               {['😀','❤️','😂','👍','😮','😢'].map(e => (
-                <button key={e} style={{ fontSize:16, background:'none', border:'none', cursor:'pointer', borderRadius:5, padding:2 }}>{e}</button>
+                <button key={e} className="text-base bg-none border-none cursor-pointer rounded p-0.5">{e}</button>
               ))}
             </div>
             <button onClick={() => { onReply(msg); setMenu(false) }}
-              style={{ width:'100%', padding:'9px 12px', fontSize:13, color:'var(--text)', background:'none', border:'none', cursor:'pointer', textAlign:'left', fontFamily:'inherit', fontWeight:500 }}>
+              className="w-full px-3 py-2 text-sm text-[var(--text)] bg-none border-none cursor-pointer text-left font-medium hover:bg-[var(--hover)]">
               ↩ Reply
             </button>
             {isMine && (
               <button onClick={() => { onDelete(msg); setMenu(false) }}
-                style={{ width:'100%', padding:'9px 12px', fontSize:13, color:'#ef4444', background:'none', border:'none', cursor:'pointer', textAlign:'left', fontFamily:'inherit', fontWeight:500 }}>
+                className="w-full px-3 py-2 text-sm text-red-500 bg-none border-none cursor-pointer text-left font-medium hover:bg-red-500/5">
                 🗑 Delete
               </button>
             )}
@@ -178,10 +171,10 @@ function AttachMenu({ onSend, onClose }) {
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
   const opts = [
-    { icon: Icon.Gallery, label:'Photo',    accept:'image/*',                   type:'image',    bg:'rgba(96,165,250,.12)',  color:'#60a5fa' },
-    { icon: Icon.Video,   label:'Video',    accept:'video/*',                   type:'video',    bg:'rgba(168,85,247,.12)',  color:'#a855f7' },
-    { icon: Icon.Doc,     label:'Document', accept:'.pdf,.doc,.docx,.txt,.xlsx', type:'document', bg:'rgba(34,197,94,.1)',    color:'#22c55e' },
-    { icon: Icon.Mic,     label:'Audio',    accept:'audio/*',                   type:'audio',    bg:'rgba(239,68,68,.1)',    color:'#ef4444' },
+    { icon: Icon.Gallery, label:'Photo',    accept:'image/*',                   type:'image',    bg:'bg-blue-400/10',  color:'text-blue-400' },
+    { icon: Icon.Video,   label:'Video',    accept:'video/*',                   type:'video',    bg:'bg-purple-500/10',color:'text-purple-500' },
+    { icon: Icon.Doc,     label:'Document', accept:'.pdf,.doc,.docx,.txt,.xlsx', type:'document', bg:'bg-green-500/10', color:'text-green-500' },
+    { icon: Icon.Mic,     label:'Audio',    accept:'audio/*',                   type:'audio',    bg:'bg-red-500/10',   color:'text-red-500' },
   ]
 
   const uploadFile = async (f, type) => {
@@ -205,37 +198,37 @@ function AttachMenu({ onSend, onClose }) {
   }
 
   return (
-    <div style={{ position:'absolute', bottom:66, left:8, background:'var(--card)', border:'.5px solid var(--border)', borderRadius:16, padding:6, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2, boxShadow:'var(--shadow)', zIndex:10, minWidth:200 }}>
+    <div className="absolute bottom-16 left-2 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2 grid grid-cols-3 gap-1 shadow-xl z-10 min-w-[200px]">
       {uploading && (
-        <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.5)', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', zIndex:5 }}>
-          <div style={{ width:26, height:26, border:'3px solid rgba(34,197,94,.2)', borderTopColor:'#22c55e', borderRadius:'50%', animation:'spin .7s linear infinite' }}/>
+        <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center z-10">
+          <div className="w-7 h-7 border-3 border-green-500/20 border-t-green-500 rounded-full animate-spin"/>
         </div>
       )}
       {opts.map(o => (
         <button key={o.label}
           onClick={() => { fileRef.current._type = o.type; fileRef.current.accept = o.accept; fileRef.current.click() }}
-          style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'9px 8px', borderRadius:10, cursor:'pointer', border:'none', background:'none', fontFamily:'inherit' }}>
-          <div style={{ width:42, height:42, borderRadius:'50%', background:o.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <o.icon width={20} height={20} style={{ color:o.color }}/>
+          className="flex flex-col items-center gap-1.5 p-2 rounded-xl cursor-pointer border-none bg-transparent hover:bg-[var(--hover)]">
+          <div className={`w-11 h-11 rounded-full ${o.bg} flex items-center justify-center`}>
+            <o.icon className={`w-5 h-5 ${o.color}`}/>
           </div>
-          <span style={{ fontSize:10, color:'var(--muted)', fontWeight:600 }}>{o.label}</span>
+          <span className="text-[10px] text-[var(--muted)] font-semibold">{o.label}</span>
         </button>
       ))}
       <button onClick={() => { onSend({ type:'location', content:'New Delhi, India' }); onClose() }}
-        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'9px 8px', borderRadius:10, cursor:'pointer', border:'none', background:'none', fontFamily:'inherit' }}>
-        <div style={{ width:42, height:42, borderRadius:'50%', background:'rgba(96,165,250,.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <Icon.Loc width={20} height={20} style={{ color:'#60a5fa' }}/>
+        className="flex flex-col items-center gap-1.5 p-2 rounded-xl cursor-pointer border-none bg-transparent hover:bg-[var(--hover)]">
+        <div className="w-11 h-11 rounded-full bg-blue-400/10 flex items-center justify-center">
+          <Icon.Loc className="w-5 h-5 text-blue-400"/>
         </div>
-        <span style={{ fontSize:10, color:'var(--muted)', fontWeight:600 }}>Location</span>
+        <span className="text-[10px] text-[var(--muted)] font-semibold">Location</span>
       </button>
       <button onClick={() => { onSend({ type:'text', content:'👤 Contact' }); onClose() }}
-        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'9px 8px', borderRadius:10, cursor:'pointer', border:'none', background:'none', fontFamily:'inherit' }}>
-        <div style={{ width:42, height:42, borderRadius:'50%', background:'rgba(251,191,36,.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <Icon.Person width={20} height={20} style={{ color:'#fbbf24' }}/>
+        className="flex flex-col items-center gap-1.5 p-2 rounded-xl cursor-pointer border-none bg-transparent hover:bg-[var(--hover)]">
+        <div className="w-11 h-11 rounded-full bg-yellow-400/10 flex items-center justify-center">
+          <Icon.Person className="w-5 h-5 text-yellow-400"/>
         </div>
-        <span style={{ fontSize:10, color:'var(--muted)', fontWeight:600 }}>Contact</span>
+        <span className="text-[10px] text-[var(--muted)] font-semibold">Contact</span>
       </button>
-      <input ref={fileRef} type="file" style={{ display:'none' }} onChange={async e => {
+      <input ref={fileRef} type="file" className="hidden" onChange={async e => {
         const f = e.target.files[0]; if (!f) return
         const type = fileRef.current._type
         await uploadFile(f, type)
@@ -273,34 +266,34 @@ function StatusViewer({ groups, user, onClose }) {
   if (!grp || !s) return null
 
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:100, background:'#000', display:'flex', flexDirection:'column' }}>
-      <div style={{ display:'flex', gap:4, padding:'12px 14px 0' }}>
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+      <div className="flex gap-1 px-4 pt-3">
         {grp.statuses.map((_,i) => (
-          <div key={i} style={{ flex:1, height:2, background:'rgba(255,255,255,.2)', borderRadius:2, overflow:'hidden' }}>
-            <div style={{ height:'100%', background:'#fff', borderRadius:2, width: i < si ? '100%' : i === si ? `${prog}%` : '0%' }}/>
+          <div key={i} className="flex-1 h-0.5 bg-white/20 rounded overflow-hidden">
+            <div className="h-full bg-white rounded" style={{ width: i < si ? '100%' : i === si ? `${prog}%` : '0%' }}/>
           </div>
         ))}
       </div>
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px' }}>
+      <div className="flex items-center gap-3 px-4 py-3">
         <Av name={grp.user.name} src={grp.user.avatar} size={36}/>
         <div>
-          <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{grp.user._id === user._id ? 'My Status' : grp.user.name}</div>
-          <div style={{ fontSize:11, color:'rgba(255,255,255,.45)' }}>{timeOnly(s.createdAt)}</div>
+          <div className="text-sm font-bold text-white">{grp.user._id === user._id ? 'My Status' : grp.user.name}</div>
+          <div className="text-xs text-white/40">{timeOnly(s.createdAt)}</div>
         </div>
-        <button onClick={onClose} style={{ marginLeft:'auto', background:'rgba(255,255,255,.1)', border:'none', width:32, height:32, borderRadius:8, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <Icon.Close width={15} height={15} style={{ color:'#fff' }}/>
+        <button onClick={onClose} className="ml-auto w-8 h-8 bg-white/10 border-none rounded-lg cursor-pointer flex items-center justify-center">
+          <Icon.Close className="w-4 h-4 text-white"/>
         </button>
       </div>
-      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background: s.type === 'text' ? s.bgColor : '#000', padding:24 }}>
+      <div className="flex-1 flex items-center justify-center p-6" style={{ background: s.type === 'text' ? s.bgColor : '#000' }}>
         {s.type === 'image' && s.fileUrl
-          ? <img src={s.fileUrl} alt="" style={{ maxWidth:'100%', maxHeight:'80%', objectFit:'contain', borderRadius:12 }}/>
+          ? <img src={s.fileUrl} alt="" className="max-w-full max-h-[80%] object-contain rounded-xl"/>
           : s.type === 'video' && s.fileUrl
-          ? <video src={s.fileUrl} style={{ maxWidth:'100%', maxHeight:'80%' }} controls autoPlay/>
-          : <p style={{ fontSize:20, fontWeight:700, color:'#fff', textAlign:'center' }}>{s.content}</p>
+          ? <video src={s.fileUrl} className="max-w-full max-h-[80%]" controls autoPlay/>
+          : <p className="text-xl font-bold text-white text-center">{s.content}</p>
         }
       </div>
-      <button style={{ position:'absolute', left:0, top:80, bottom:80, width:'40%', opacity:0, cursor:'pointer', border:'none', background:'none' }} onClick={() => { if(si>0)setSi(i=>i-1); else if(gi>0){setGi(i=>i-1);setSi(0)} }}/>
-      <button style={{ position:'absolute', right:0, top:80, bottom:80, width:'40%', opacity:0, cursor:'pointer', border:'none', background:'none' }} onClick={() => { if(si<grp.statuses.length-1)setSi(i=>i+1); else if(gi<groups.length-1){setGi(i=>i+1);setSi(0)} else onClose() }}/>
+      <button className="absolute left-0 top-20 bottom-20 w-[40%] opacity-0 cursor-pointer border-none bg-transparent" onClick={() => { if(si>0)setSi(i=>i-1); else if(gi>0){setGi(i=>i-1);setSi(0)} }}/>
+      <button className="absolute right-0 top-20 bottom-20 w-[40%] opacity-0 cursor-pointer border-none bg-transparent" onClick={() => { if(si<grp.statuses.length-1)setSi(i=>i+1); else if(gi<groups.length-1){setGi(i=>i+1);setSi(0)} else onClose() }}/>
     </div>
   )
 }
@@ -319,29 +312,27 @@ function CallOverlay({ type, chat, user, isOnline, onEnd }) {
   const dur = `${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(elapsed%60).padStart(2,'0')}`
 
   return (
-    <div style={{ position:'absolute', inset:0, zIndex:50, display:'flex', flexDirection:'column', background: type==='video' ? 'linear-gradient(180deg,#070b1f,#040610)' : 'linear-gradient(180deg,#071a0f,#040c07)' }}>
-      <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14 }}>
-        <div style={{ width:80, height:80, borderRadius:'50%', background:gradFor(name), display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:800, color:'#fff' }}>
+    <div className={`absolute inset-0 z-50 flex flex-col ${type==='video' ? 'bg-gradient-to-b from-[#070b1f] to-[#040610]' : 'bg-gradient-to-b from-[#071a0f] to-[#040c07]'}`}>
+      <div className="flex-1 flex flex-col items-center justify-center gap-4">
+        <div className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-black text-white" style={{ background:gradFor(name) }}>
           {initials(name)}
         </div>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:20, fontWeight:800, color:'#fff' }}>{name}</div>
-          <div style={{ fontSize:13, color:'rgba(255,255,255,.45)', marginTop:6 }}>
-            {elapsed > 0 ? `${type==='video'?'Video':'Voice'} · ${dur}` : 'Calling...'}
-          </div>
+        <div className="text-center">
+          <div className="text-xl font-black text-white">{name}</div>
+          <div className="text-sm text-white/40 mt-1">{elapsed > 0 ? `${type==='video'?'Video':'Voice'} · ${dur}` : 'Calling...'}</div>
         </div>
       </div>
-      <div style={{ display:'flex', gap:20, justifyContent:'center', paddingBottom:48 }}>
+      <div className="flex gap-6 justify-center pb-12">
         {[
           { icon:Icon.Mute, label:'Mute', fn:()=>{} },
-          { icon:Icon.End, label:'End', fn:onEnd, bg:'#ef4444' },
+          { icon:Icon.End, label:'End', fn:onEnd, bg:'bg-red-500' },
           { icon:Icon.Speaker, label:'Speaker', fn:()=>{} },
         ].map(b => (
-          <div key={b.label} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:7 }}>
-            <button onClick={b.fn} style={{ width:56, height:56, borderRadius:'50%', background:b.bg||'rgba(255,255,255,.12)', display:'flex', alignItems:'center', justifyContent:'center', border:'none', cursor:'pointer' }}>
-              <b.icon width={22} height={22} style={{ color:'#fff' }}/>
+          <div key={b.label} className="flex flex-col items-center gap-2">
+            <button onClick={b.fn} className={`w-14 h-14 rounded-full ${b.bg||'bg-white/10'} flex items-center justify-center border-none cursor-pointer`}>
+              <b.icon className="w-6 h-6 text-white"/>
             </button>
-            <span style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.4)' }}>{b.label}</span>
+            <span className="text-xs font-semibold text-white/40">{b.label}</span>
           </div>
         ))}
       </div>
@@ -374,29 +365,30 @@ function StatusCompose({ user, api, socket, onClose }) {
   }
 
   return (
-    <div style={{ position:'absolute', inset:0, zIndex:40, display:'flex', flexDirection:'column', background:'var(--bg)' }}>
-      <div style={{ background:'var(--s1)', padding:'12px 14px', display:'flex', alignItems:'center', gap:12, borderBottom:'.5px solid var(--border)' }}>
-        <button onClick={onClose} style={{ width:34, height:34, borderRadius:9, background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <Icon.Back width={16} height={16} style={{ color:'var(--text)' }}/>
+    <div className="absolute inset-0 z-40 flex flex-col bg-[var(--bg)]">
+      <div className="h-14 bg-[var(--s1)] px-4 flex items-center gap-3 border-b border-[var(--border)] flex-shrink-0">
+        <button onClick={onClose} className="w-9 h-9 bg-[var(--s2)] rounded-xl border-none cursor-pointer flex items-center justify-center">
+          <Icon.Back className="w-5 h-5 text-[var(--text)]"/>
         </button>
-        <span style={{ fontSize:15, fontWeight:700, color:'var(--text)', flex:1 }}>New Status</span>
+        <span className="text-base font-bold text-[var(--text)] flex-1">New Status</span>
         <button onClick={post} disabled={posting || !text.trim()}
-          style={{ background:'rgba(34,197,94,.1)', color:'#22c55e', border:'none', borderRadius:8, padding:'7px 15px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity: posting || !text.trim() ? .5 : 1 }}>
+          className="bg-green-500/10 text-green-500 border-none rounded-lg px-4 py-2 text-sm font-bold cursor-pointer disabled:opacity-50">
           {posting ? 'Posting...' : 'Post'}
         </button>
       </div>
-      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:bg, padding:28 }}>
-        <p style={{ fontSize:20, fontWeight:700, color:'#fff', textAlign:'center' }}>{text || 'Write something...'}</p>
+      <div className="flex-1 flex items-center justify-center p-7" style={{ background:bg }}>
+        <p className="text-xl font-bold text-white text-center">{text || 'Write something...'}</p>
       </div>
-      <div style={{ display:'flex', gap:8, padding:'10px 14px', borderTop:'.5px solid var(--border)', overflowX:'auto' }}>
+      <div className="flex gap-2 px-4 py-3 border-t border-[var(--border)] overflow-x-auto">
         {COLORS.map((c,i) => (
           <button key={i} onClick={() => setBg(c)}
-            style={{ width:26, height:26, borderRadius:'50%', cursor:'pointer', flexShrink:0, border: bg===c ? '2px solid var(--text)' : '2px solid transparent', background:c }}/>
+            className="w-7 h-7 rounded-full cursor-pointer flex-shrink-0"
+            style={{ background:c, border: bg===c ? '2px solid var(--text)' : '2px solid transparent' }}/>
         ))}
       </div>
-      <div style={{ padding:'8px 12px', display:'flex', alignItems:'center', gap:8, background:'var(--s1)', borderTop:'.5px solid var(--border)' }}>
+      <div className="px-3 py-2 bg-[var(--s1)] border-t border-[var(--border)] flex-shrink-0">
         <input value={text} onChange={e => setText(e.target.value)} placeholder="Write a status..."
-          style={{ flex:1, background:'var(--inp)', border:'.5px solid var(--border)', borderRadius:22, padding:'10px 16px', fontSize:14, color:'var(--text)', outline:'none', fontFamily:'inherit' }}/>
+          className="w-full bg-[var(--inp)] border border-[var(--border)] rounded-full px-4 py-2.5 text-sm text-[var(--text)] outline-none"/>
       </div>
     </div>
   )
@@ -426,26 +418,17 @@ export default function ChatPage() {
   const [profForm, setProfForm] = useState({ name:'', about:'', phone:'' })
   const [addPhone, setAddPhone] = useState('')
   const [foundUser, setFoundUser] = useState(null)
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   const [showSidebar, setShowSidebar] = useState(true)
 
   const bottomRef = useRef()
   const typingRef = useRef()
   const isDark = theme === 'dark'
 
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
   useEffect(() => { api.get('/chats').then(({ data }) => setChats(data)) }, [])
 
   useEffect(() => {
-    if (tab === 'contacts' || overlay === 'addmem')
-      api.get('/users/all').then(({ data }) => setAllUsers(data))
-    if (tab === 'status')
-      api.get('/status').then(({ data }) => setStatuses(data))
+    if (tab === 'contacts' || overlay === 'addmem') api.get('/users/all').then(({ data }) => setAllUsers(data))
+    if (tab === 'status') api.get('/status').then(({ data }) => setStatuses(data))
   }, [tab, overlay])
 
   useEffect(() => {
@@ -460,9 +443,8 @@ export default function ChatPage() {
       if (active?._id === msg.chat) setMessages(p => [...p, msg])
       setChats(p => p.map(c => c._id === msg.chat ? { ...c, lastMessage: msg, updatedAt: new Date() } : c)
         .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt)))
-      if (active?._id !== msg.chat && 'Notification' in window && Notification.permission === 'granted') {
+      if (active?._id !== msg.chat && 'Notification' in window && Notification.permission === 'granted')
         new Notification(msg.sender?.name || 'New Message', { body: msg.content || '📎 Media', icon: '/favicon.ico' })
-      }
     }
     socket.on('message:receive', onMsg)
     socket.on('typing:start', ({ chatId }) => { if (active?._id === chatId) setRemoteType(true) })
@@ -493,8 +475,7 @@ export default function ChatPage() {
   const goBack = () => { setActive(null); setShowSidebar(true) }
 
   const openChat = (chat) => {
-    setActive(chat); setRemoteType(false); setReplyTo(null)
-    if (isMobile) setShowSidebar(false)
+    setActive(chat); setRemoteType(false); setReplyTo(null); setShowSidebar(false)
   }
 
   const startDM = async (uid) => {
@@ -531,7 +512,7 @@ export default function ChatPage() {
 
   const deleteMsg = async (msg) => {
     await api.delete(`/messages/${msg._id}`, { data: { forEveryone: true } })
-    setMessages(p => p.map(m => m._id === msg._id ? { ...m, isDeleted: true, content: 'This message was deleted' } : m))
+    setMessages(p => p.map(m => m._id === msg._id ? { ...m, isDeleted: true, content: 'deleted' } : m))
   }
 
   const findUser = async () => {
@@ -549,429 +530,397 @@ export default function ChatPage() {
   const chatName = active?.isGroup ? active.name : other?.name
   const activeGrad = chatName ? gradFor(chatName) : GRADS[0]
 
-  const ChatList = () => (
-    <>
-      {chats.length === 0
-        ? <div style={{ textAlign:'center', padding:'48px 20px', color:'var(--muted)' }}>
-            <Icon.Chat width={36} height={36} style={{ margin:'0 auto 10px', color:'var(--muted2)' }}/>
-            <p style={{ fontSize:14, fontWeight:600 }}>No chats yet</p>
-            <p style={{ fontSize:12, marginTop:4 }}>Search for users to start chatting</p>
-          </div>
-        : chats.map(chat => {
-            const o = chat.isGroup ? null : getOther(chat, user._id)
-            const name = chat.isGroup ? chat.name : o?.name || 'Unknown'
-            const last = chat.lastMessage
-            let lastTxt = 'Start a conversation'
-            if (last) {
-              if (last.isDeleted) lastTxt = '🚫 Deleted'
-              else if (last.type === 'image') lastTxt = '📷 Photo'
-              else if (last.type === 'video') lastTxt = '🎬 Video'
-              else if (last.type === 'document') lastTxt = `📄 ${last.fileName||'Document'}`
-              else if (last.type === 'audio' || last.type === 'voice') lastTxt = '🎵 Audio'
-              else if (last.type === 'location') lastTxt = '📍 Location'
-              else lastTxt = last.content?.slice(0,40) + (last.content?.length > 40 ? '…' : '')
-            }
-            return (
-              <div key={chat._id} onClick={() => openChat(chat)}
-                style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', cursor:'pointer', borderBottom:'.5px solid var(--border)', background: active?._id === chat._id ? 'var(--hover)' : 'transparent', position:'relative', transition:'background .1s' }}>
-                {active?._id === chat._id && <div style={{ position:'absolute', left:0, top:'20%', bottom:'20%', width:3, background:'#22c55e', borderRadius:'0 3px 3px 0' }}/>}
-                <Av name={name} src={chat.isGroup ? chat.groupAvatar : o?.avatar} online={!chat.isGroup ? isOnline(o?._id) : undefined} size={46}/>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 }}>
-                    <span style={{ fontSize:15, fontWeight:600, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'60%' }}>{name}</span>
-                    <span style={{ fontSize:11, color:'var(--muted)', fontWeight:500, flexShrink:0 }}>{fmt(last?.createdAt || chat.updatedAt)}</span>
-                  </div>
-                  <p style={{ fontSize:13, color:'var(--muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{lastTxt}</p>
-                </div>
-              </div>
-            )
-          })
-      }
-    </>
-  )
-
-  const StatusList = () => (
-    <>
-      <div onClick={() => setOverlay('sc')}
-        style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', cursor:'pointer', borderBottom:'.5px solid var(--border)' }}>
-        <div style={{ position:'relative', flexShrink:0 }}>
-          <div style={{ width:48, height:48, borderRadius:'50%', border:'2px dashed var(--muted2)', padding:1 }}>
-            <Av name={user.name} src={user.avatar} size={42}/>
-          </div>
-          <div style={{ position:'absolute', bottom:0, right:0, width:16, height:16, background:'#22c55e', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', border:'2px solid var(--s1)' }}>
-            <Icon.Plus width={8} height={8} style={{ color:'#fff' }}/>
-          </div>
-        </div>
-        <div><div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>My Status</div><div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>Tap to add update</div></div>
-      </div>
-      {statuses.length > 0 && statuses.map((g, gi) => (
-        <div key={gi} onClick={() => { setStatusView(gi); setOverlay('sv') }}
-          style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', cursor:'pointer', borderBottom:'.5px solid var(--border)' }}>
-          <div style={{ width:48, height:48, borderRadius:'50%', padding:2.5, background:'conic-gradient(#22c55e,#10b981,#22c55e)', flexShrink:0 }}>
-            <Av name={g.user.name} src={g.user.avatar} size={43} style={{ border:'2.5px solid var(--s1)' }}/>
-          </div>
-          <div>
-            <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>{g.user._id === user._id ? 'My Status' : g.user.name}</div>
-            <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{g.statuses.length} update{g.statuses.length > 1 ? 's' : ''}</div>
-          </div>
-        </div>
-      ))}
-    </>
-  )
-
-  const CallsList = () => (
-    <>
-      {chats.filter(c => !c.isGroup).slice(0,5).map(chat => {
-        const o = getOther(chat, user._id)
-        return (
-          <div key={chat._id} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderBottom:'.5px solid var(--border)' }}>
-            <Av name={o.name} src={o.avatar} online={isOnline(o._id)} size={46}/>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:15, fontWeight:600, color:'var(--text)' }}>{o.name}</div>
-              <div style={{ fontSize:12, color:'#22c55e', marginTop:2 }}>📞 Incoming · Today</div>
-            </div>
-            <div style={{ display:'flex', gap:8 }}>
-              <button onClick={() => { setActive(chat); setOverlay('voice') }} style={{ width:36, height:36, borderRadius:'50%', background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <Icon.Call width={16} height={16} style={{ color:'#22c55e' }}/>
-              </button>
-              <button onClick={() => { setActive(chat); setOverlay('video') }} style={{ width:36, height:36, borderRadius:'50%', background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <Icon.Video width={16} height={16} style={{ color:'#22c55e' }}/>
-              </button>
-            </div>
-          </div>
-        )
-      })}
-    </>
-  )
-
   return (
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', fontFamily:'var(--ff)', background:'var(--bg)' }}>
-      <style>{`
-        .msg-menu-btn{opacity:0}
-        .mr:hover .msg-menu-btn{opacity:1!important}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes ww{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.8)}}
-        *{-webkit-tap-highlight-color:transparent}
-        input,textarea{font-size:16px!important}
-      `}</style>
+    <div className="flex h-[100dvh] overflow-hidden bg-[var(--bg)] font-[var(--ff)]">
+      <style>{`.msg-menu-btn{opacity:0}.mr:hover .msg-menu-btn{opacity:1!important}*{-webkit-tap-highlight-color:transparent}`}</style>
 
       {/* SIDEBAR */}
-      {(!isMobile || showSidebar) && (
-        <div style={{
-          width: isMobile ? '100vw' : 340,
-          background:'var(--s1)',
-          display:'flex',
-          flexDirection:'column',
-          borderRight:'.5px solid var(--border)',
-          flexShrink:0,
-          position: isMobile ? 'absolute' : 'relative',
-          top:0, left:0, bottom:0,
-          zIndex: isMobile ? 30 : 'auto',
-          height:'100%'
-        }}>
-          {/* Topbar */}
-          <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'.5px solid var(--border)', minHeight:56 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-              <div style={{ width:32, height:32, borderRadius:9, background:'linear-gradient(135deg,#16a34a,#22c55e)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <Icon.Chat width={16} height={16} style={{ color:'#fff' }}/>
-              </div>
-              <span style={{ fontSize:17, fontWeight:800, letterSpacing:'-.5px', color:'var(--text)' }}>
-                Chit<span style={{ color:'#22c55e' }}>Chat</span>
-              </span>
+      <div className={`
+        flex flex-col bg-[var(--s1)] border-r border-[var(--border)] flex-shrink-0
+        md:relative md:w-[340px] md:translate-x-0
+        absolute inset-y-0 left-0 z-30 w-full
+        transition-transform duration-300
+        ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Topbar */}
+        <div className="h-14 px-4 flex items-center justify-between border-b border-[var(--border)] flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-700 to-green-500 flex items-center justify-center flex-shrink-0">
+              <Icon.Chat className="w-4 h-4 text-white"/>
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:2 }}>
-              <button onClick={toggle} style={{ width:36, height:36, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'none', background:'none', color:'var(--muted)' }}>
-                {isDark ? <Icon.Sun width={17} height={17}/> : <Icon.Moon width={17} height={17}/>}
-              </button>
-              <IBtn icon={Icon.Edit} onClick={() => setOverlay('addmem')} title="New Chat"/>
-              <IBtn icon={Icon.More} onClick={() => logout()} title="Logout"/>
-            </div>
+            <span className="text-lg font-black tracking-tight text-[var(--text)]">
+              Chit<span className="text-green-500">Chat</span>
+            </span>
           </div>
-
-          {/* Profile Row */}
-          <button onClick={() => { setOverlay('profile'); setProfEdit(false); setProfForm({ name:user.name, about:user.about||'', phone:user.phone?.replace('+91','')||'' }) }}
-            style={{ display:'flex', alignItems:'center', gap:11, padding:'11px 14px', borderBottom:'.5px solid var(--border)', background:'none', border:'none', cursor:'pointer', textAlign:'left', width:'100%', minHeight:64 }}
-            onMouseEnter={e => e.currentTarget.style.background='var(--hover)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
-            <Av name={user.name} src={user.avatar} online={true} size={40}/>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:700, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{user.name}</div>
-              <div style={{ fontSize:12, color:'var(--muted)', marginTop:1 }}>{user.phone || 'Tap to edit profile'}</div>
-            </div>
-            <Icon.Edit width={14} height={14} style={{ color:'var(--muted2)', flexShrink:0 }}/>
-          </button>
-
-          {/* Tabs */}
-          <div style={{ display:'flex', borderBottom:'.5px solid var(--border)' }}>
-            {['chats','status','calls'].map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                style={{ flex:1, padding:'12px 0', fontSize:12, fontWeight:700, color: tab===t ? '#22c55e' : 'var(--muted)', cursor:'pointer', border:'none', background:'none', fontFamily:'var(--ff)', textTransform:'uppercase', letterSpacing:'.5px', position:'relative' }}>
-                {t}
-                {tab === t && <span style={{ position:'absolute', bottom:0, left:'25%', right:'25%', height:2, background:'#22c55e', borderRadius:'2px 2px 0 0' }}/>}
-              </button>
-            ))}
-          </div>
-
-          {/* Search */}
-          {tab === 'chats' && (
-            <div style={{ padding:'8px 12px', borderBottom:'.5px solid var(--border)' }}>
-              <div style={{ background:'var(--s2)', borderRadius:10, display:'flex', alignItems:'center', gap:8, padding:'9px 12px', border:'.5px solid var(--border)' }}>
-                <Icon.Search width={14} height={14} style={{ color:'var(--muted2)', flexShrink:0 }}/>
-                <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Search or start new chat"
-                  style={{ background:'none', border:'none', outline:'none', fontSize:14, color:'var(--text)', flex:1, fontFamily:'var(--ff)' }}/>
-                {searchQ && <button onClick={() => { setSearchQ(''); setSearchRes([]) }} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:16, padding:0 }}>✕</button>}
-              </div>
-            </div>
-          )}
-
-          {/* Tab Content */}
-          <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
-            {tab === 'chats' && searchQ
-              ? searchRes.map(u => (
-                  <div key={u._id} onClick={() => startDM(u._id)}
-                    style={{ display:'flex', alignItems:'center', gap:11, padding:'11px 14px', cursor:'pointer', borderBottom:'.5px solid var(--border)' }}>
-                    <Av name={u.name} src={u.avatar} online={isOnline(u._id)} size={46}/>
-                    <div><div style={{ fontSize:15, fontWeight:600, color:'var(--text)' }}>{u.name}</div><div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{u.phone||u.email}</div></div>
-                  </div>
-                ))
-              : tab === 'chats' ? <ChatList/>
-              : tab === 'status' ? <StatusList/>
-              : <CallsList/>
-            }
+          <div className="flex items-center gap-1">
+            <button onClick={toggle} className="w-9 h-9 rounded-xl flex items-center justify-center border-none bg-transparent cursor-pointer text-[var(--muted)] hover:bg-[var(--hover)]">
+              {isDark ? <Icon.Sun className="w-5 h-5"/> : <Icon.Moon className="w-5 h-5"/>}
+            </button>
+            <IBtn icon={Icon.Edit} onClick={() => setOverlay('addmem')} title="New Chat"/>
+            <IBtn icon={Icon.More} onClick={() => logout()} title="Logout"/>
           </div>
         </div>
-      )}
 
-      {/* MAIN CHAT */}
-      {(!isMobile || !showSidebar) && (
-        <div style={{ flex:1, display:'flex', flexDirection:'column', background:'var(--bg)', position:'relative', overflow:'hidden', width: isMobile ? '100vw' : 'auto', height:'100%' }}>
+        {/* Profile */}
+        <button onClick={() => { setOverlay('profile'); setProfEdit(false); setProfForm({ name:user.name, about:user.about||'', phone:user.phone?.replace('+91','')||'' }) }}
+          className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] bg-transparent border-none cursor-pointer text-left w-full hover:bg-[var(--hover)] flex-shrink-0">
+          <Av name={user.name} src={user.avatar} online={true} size={42}/>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-[var(--text)] truncate">{user.name}</div>
+            <div className="text-xs text-[var(--muted)] mt-0.5">{user.phone || 'Tap to edit profile'}</div>
+          </div>
+          <Icon.Edit className="w-4 h-4 text-[var(--muted2)] flex-shrink-0"/>
+        </button>
 
-          <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(circle, var(--s3) 1px, transparent 1px)', backgroundSize:'24px 24px', opacity:.3, pointerEvents:'none' }}/>
+        {/* Tabs */}
+        <div className="flex border-b border-[var(--border)] flex-shrink-0">
+          {['chats','status','calls'].map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide border-none cursor-pointer relative transition-colors
+                ${tab===t ? 'text-green-500 bg-transparent' : 'text-[var(--muted)] bg-transparent hover:bg-[var(--hover)]'}`}>
+              {t}
+              {tab===t && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-green-500 rounded-t"/>}
+            </button>
+          ))}
+        </div>
 
-          {active ? (
-            <>
-              {/* Chat Header */}
-              <div style={{ background:'var(--s1)', padding:'0 10px', display:'flex', alignItems:'center', gap:8, borderBottom:'.5px solid var(--border)', zIndex:2, height:56, flexShrink:0 }}>
-                {/* Back Button - always show on mobile */}
-                <button onClick={goBack}
-                  style={{ width:38, height:38, borderRadius:10, background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <Icon.Back width={18} height={18} style={{ color:'var(--text)' }}/>
-                </button>
-                <Av name={chatName} src={active.isGroup ? active.groupAvatar : other?.avatar} online={!active.isGroup ? isOnline(other?._id) : undefined} size={36}/>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:15, fontWeight:700, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{chatName}</div>
-                  <div style={{ fontSize:11, fontWeight:500, color: remoteType ? '#22c55e' : 'var(--muted)' }}>
-                    {remoteType ? 'typing...' : active.isGroup ? `${active.members?.length} members` : isOnline(other?._id) ? 'online' : other?.phone || ''}
+        {/* Search */}
+        {tab === 'chats' && (
+          <div className="px-3 py-2 border-b border-[var(--border)] flex-shrink-0">
+            <div className="bg-[var(--s2)] rounded-xl flex items-center gap-2 px-3 py-2.5 border border-[var(--border)]">
+              <Icon.Search className="w-4 h-4 text-[var(--muted2)] flex-shrink-0"/>
+              <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Search or start new chat"
+                className="bg-transparent border-none outline-none text-sm text-[var(--text)] flex-1 min-w-0"/>
+              {searchQ && <button onClick={() => { setSearchQ(''); setSearchRes([]) }} className="border-none bg-transparent cursor-pointer text-[var(--muted)] text-base leading-none">✕</button>}
+            </div>
+          </div>
+        )}
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto">
+          {tab === 'chats' && searchQ
+            ? searchRes.map(u => (
+                <div key={u._id} onClick={() => startDM(u._id)}
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[var(--border)] hover:bg-[var(--hover)]">
+                  <Av name={u.name} src={u.avatar} online={isOnline(u._id)} size={46}/>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--text)]">{u.name}</div>
+                    <div className="text-xs text-[var(--muted)] mt-0.5">{u.phone||u.email}</div>
                   </div>
                 </div>
-                <div style={{ display:'flex', gap:2 }}>
-                  <IBtn icon={Icon.Video} onClick={() => setOverlay('video')} title="Video"/>
-                  <IBtn icon={Icon.Call} onClick={() => setOverlay('voice')} title="Call"/>
-                  <IBtn icon={Icon.More} title="More"/>
+              ))
+            : tab === 'chats'
+            ? chats.length === 0
+              ? <div className="text-center py-12 px-6 text-[var(--muted)]">
+                  <Icon.Chat className="w-10 h-10 mx-auto mb-3 text-[var(--muted2)]"/>
+                  <p className="text-sm font-semibold">No chats yet</p>
+                  <p className="text-xs mt-1">Search for users to start chatting</p>
                 </div>
-              </div>
-
-              {/* Messages */}
-              <div style={{ flex:1, overflowY:'auto', padding:'10px 12px', display:'flex', flexDirection:'column', gap:1, position:'relative', zIndex:1, WebkitOverflowScrolling:'touch' }}>
-                {loadMsg
-                  ? <div style={{ display:'flex', justifyContent:'center', padding:40 }}>
-                      <div style={{ width:24, height:24, border:'2px solid rgba(34,197,94,.2)', borderTopColor:'#22c55e', borderRadius:'50%', animation:'spin .7s linear infinite' }}/>
-                    </div>
-                  : messages.length === 0
-                  ? <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, opacity:.6 }}>
-                      <Icon.Lock width={20} height={20} style={{ color:'var(--muted)' }}/>
-                      <p style={{ fontSize:13, color:'var(--muted)', fontWeight:500 }}>End-to-end encrypted</p>
-                    </div>
-                  : messages.map((msg, i) => {
-                      const isMine = msg.sender?._id === user._id
-                      const prev = messages[i-1]
-                      const showName = active.isGroup && !isMine && prev?.sender?._id !== msg.sender?._id
-                      return <Bubble key={msg._id} msg={msg} isMine={isMine} showName={showName} onReply={setReplyTo} onDelete={deleteMsg}/>
-                    })
-                }
-                {remoteType && (
-                  <div style={{ display:'flex', alignItems:'flex-end', gap:5 }}>
-                    <div style={{ width:24, height:24, borderRadius:'50%', background:activeGrad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:800, color:'#fff', marginBottom:4 }}>
-                      {initials(chatName)}
-                    </div>
-                    <div style={{ background:'var(--in)', border:'.5px solid var(--in-border)', borderRadius:'0 14px 14px 14px', padding:'10px 14px' }}>
-                      <div style={{ display:'flex', gap:3, alignItems:'center', height:14 }}>
-                        {[0,150,300].map(d => <div key={d} style={{ width:5, height:5, borderRadius:'50%', background:'var(--muted)', animation:`ww 1.2s ease-in-out ${d}ms infinite` }}/>)}
+              : chats.map(chat => {
+                  const o = chat.isGroup ? null : getOther(chat, user._id)
+                  const name = chat.isGroup ? chat.name : o?.name || 'Unknown'
+                  const last = chat.lastMessage
+                  let lastTxt = 'Start a conversation'
+                  if (last) {
+                    if (last.isDeleted) lastTxt = '🚫 Deleted'
+                    else if (last.type === 'image') lastTxt = '📷 Photo'
+                    else if (last.type === 'video') lastTxt = '🎬 Video'
+                    else if (last.type === 'document') lastTxt = `📄 ${last.fileName||'Doc'}`
+                    else if (last.type === 'audio' || last.type === 'voice') lastTxt = '🎵 Audio'
+                    else if (last.type === 'location') lastTxt = '📍 Location'
+                    else lastTxt = last.content?.slice(0,40) + (last.content?.length > 40 ? '…' : '')
+                  }
+                  return (
+                    <div key={chat._id} onClick={() => openChat(chat)}
+                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[var(--border)] relative transition-colors
+                        ${active?._id === chat._id ? 'bg-[var(--hover)]' : 'hover:bg-[var(--hover)]'}`}>
+                      {active?._id === chat._id && <div className="absolute left-0 top-[20%] bottom-[20%] w-0.5 bg-green-500 rounded-r"/>}
+                      <Av name={name} src={chat.isGroup ? chat.groupAvatar : o?.avatar} online={!chat.isGroup ? isOnline(o?._id) : undefined} size={46}/>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-0.5">
+                          <span className="text-sm font-semibold text-[var(--text)] truncate max-w-[60%]">{name}</span>
+                          <span className="text-[10px] text-[var(--muted)] font-medium flex-shrink-0">{fmt(last?.createdAt || chat.updatedAt)}</span>
+                        </div>
+                        <p className="text-xs text-[var(--muted)] truncate">{lastTxt}</p>
                       </div>
                     </div>
-                  </div>
-                )}
-                <div ref={bottomRef}/>
-              </div>
-
-              {/* Reply bar */}
-              {replyTo && (
-                <div style={{ background:'var(--s1)', borderTop:'.5px solid var(--border)', padding:'8px 12px', display:'flex', alignItems:'center', gap:10, zIndex:2, flexShrink:0 }}>
-                  <div style={{ flex:1, borderLeft:'3px solid #22c55e', paddingLeft:8 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:'#22c55e' }}>{replyTo.sender?.name || 'You'}</div>
-                    <div style={{ fontSize:12, color:'var(--muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{replyTo.content || '📎 Media'}</div>
-                  </div>
-                  <button onClick={() => setReplyTo(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:18, padding:4 }}>✕</button>
-                </div>
-              )}
-
-              {/* Input */}
-              <div style={{ background:'var(--s1)', padding:'8px 10px', display:'flex', alignItems:'center', gap:6, borderTop:'.5px solid var(--border)', position:'relative', zIndex:2, flexShrink:0 }}>
-                <button onClick={() => setAttach(a => !a)}
-                  style={{ width:40, height:40, borderRadius:'50%', background:'var(--s2)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'none', color:'var(--muted)', flexShrink:0 }}>
-                  <Icon.Attach width={18} height={18}/>
-                </button>
-                <div style={{ flex:1, background:'var(--inp)', borderRadius:22, display:'flex', alignItems:'center', gap:6, padding:'8px 14px', border:'.5px solid var(--border)', minHeight:42 }}>
-                  <input value={text} onChange={handleTyping}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMsg())}
-                    placeholder="Message..."
-                    style={{ flex:1, background:'none', border:'none', outline:'none', fontSize:15, color:'var(--text)', fontFamily:'var(--ff)', minWidth:0 }}/>
-                  <button style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', flexShrink:0, padding:0 }}>
-                    <Icon.Emoji width={18} height={18}/>
-                  </button>
-                </div>
-                <button onClick={() => text.trim() ? sendMsg() : sendMsg({ type:'voice', content:'', duration:`0:${Math.floor(Math.random()*50+5).toString().padStart(2,'0')}` })}
-                  style={{ width:42, height:42, borderRadius:'50%', background:'linear-gradient(135deg,#16a34a,#22c55e)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'none', flexShrink:0, boxShadow:'0 4px 12px rgba(34,197,94,.3)' }}>
-                  {text.trim()
-                    ? <Icon.Send width={17} height={17} style={{ color:'#fff', marginLeft:1 }}/>
-                    : <Icon.Mic width={17} height={17} style={{ color:'#fff' }}/>
-                  }
-                </button>
-                {attach && <AttachMenu onSend={(p) => sendMsg(p)} onClose={() => setAttach(false)}/>}
-              </div>
-
-              {(overlay === 'voice' || overlay === 'video') && (
-                <CallOverlay type={overlay} chat={active} user={user} isOnline={isOnline} onEnd={() => setOverlay(null)}/>
-              )}
-            </>
-          ) : (
-            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24, position:'relative', zIndex:1 }}>
-              <div style={{ width:70, height:70, borderRadius:20, background:'linear-gradient(135deg,#16a34a,#22c55e)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 12px 32px rgba(34,197,94,.25)' }}>
-                <Icon.Chat width={32} height={32} style={{ color:'#fff' }}/>
-              </div>
-              <div style={{ fontSize:24, fontWeight:800, letterSpacing:'-.6px', color:'var(--text)' }}>
-                Chit<span style={{ color:'#22c55e' }}>Chat</span>
-              </div>
-              <p style={{ fontSize:14, color:'var(--muted)', textAlign:'center', maxWidth:240, lineHeight:1.6 }}>
-                Select a conversation or search for a user to start chatting.
-              </p>
-              {isMobile && (
-                <button onClick={() => setShowSidebar(true)}
-                  style={{ background:'linear-gradient(135deg,#16a34a,#22c55e)', color:'#fff', border:'none', borderRadius:12, padding:'12px 24px', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'var(--ff)', marginTop:8 }}>
-                  View Chats
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* ADD MEMBER OVERLAY */}
-          {overlay === 'addmem' && (
-            <div style={{ position:'absolute', inset:0, zIndex:40, background:'var(--bg)', display:'flex', flexDirection:'column' }}>
-              <div style={{ background:'var(--s1)', padding:'0 14px', display:'flex', alignItems:'center', gap:12, borderBottom:'.5px solid var(--border)', height:56, flexShrink:0 }}>
-                <button onClick={() => setOverlay(null)} style={{ width:36, height:36, borderRadius:9, background:'var(--s2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <Icon.Back width={17} height={17} style={{ color:'var(--text)' }}/>
-                </button>
-                <span style={{ fontSize:16, fontWeight:700, color:'var(--text)' }}>New Chat</span>
-              </div>
-              <div style={{ padding:'13px 14px', borderBottom:'.5px solid var(--border)' }}>
-                <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10, fontWeight:500 }}>Find by mobile number:</div>
-                <div style={{ display:'flex', gap:8 }}>
-                  <div style={{ flex:1, background:'var(--s2)', border:'.5px solid var(--border)', borderRadius:11, display:'flex', alignItems:'center', gap:8, padding:'10px 12px' }}>
-                    <Icon.Call width={13} height={13} style={{ color:'var(--muted)', flexShrink:0 }}/>
-                    <span style={{ fontSize:13, color:'var(--muted)', fontWeight:700 }}>+91</span>
-                    <div style={{ width:1, height:15, background:'var(--border)' }}/>
-                    <input value={addPhone} onChange={e => setAddPhone(e.target.value.replace(/\D/g,'').slice(0,10))} placeholder="Mobile number" inputMode="numeric"
-                      style={{ flex:1, background:'none', border:'none', outline:'none', fontSize:15, color:'var(--text)', fontFamily:'var(--ff)' }}/>
-                  </div>
-                  <button onClick={findUser}
-                    style={{ background:'#22c55e', color:'#fff', border:'none', borderRadius:10, padding:'0 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'var(--ff)' }}>
-                    Find
-                  </button>
-                </div>
-                {foundUser && (
-                  <div style={{ marginTop:10, background:'rgba(34,197,94,.06)', border:'.5px solid rgba(34,197,94,.2)', borderRadius:12, padding:11, display:'flex', alignItems:'center', gap:10 }}>
-                    <Av name={foundUser.name} src={foundUser.avatar} size={40}/>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>{foundUser.name}</div>
-                      <div style={{ fontSize:12, color:'#22c55e', marginTop:2 }}>{foundUser.phone}</div>
+                  )
+                })
+            : tab === 'status'
+            ? <>
+                <div onClick={() => setOverlay('sc')} className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[var(--border)] hover:bg-[var(--hover)]">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full border-2 border-dashed border-[var(--muted2)] p-0.5">
+                      <Av name={user.name} src={user.avatar} size={40}/>
                     </div>
-                    <button onClick={() => { startDM(foundUser._id); setFoundUser(null); setAddPhone('') }}
-                      style={{ background:'#22c55e', color:'#fff', border:'none', borderRadius:9, padding:'8px 14px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'var(--ff)' }}>
-                      Chat
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
-                <div style={{ fontSize:11, fontWeight:700, color:'var(--muted2)', padding:'8px 14px 4px', textTransform:'uppercase', letterSpacing:'.7px' }}>All Contacts</div>
-                {allUsers.map(u => (
-                  <div key={u._id} onClick={() => startDM(u._id)}
-                    style={{ display:'flex', alignItems:'center', gap:11, padding:'11px 14px', cursor:'pointer', borderBottom:'.5px solid var(--border)' }}>
-                    <Av name={u.name} src={u.avatar} online={isOnline(u._id)} size={46}/>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:15, fontWeight:600, color:'var(--text)' }}>{u.name}</div>
-                      <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{u.phone || u.email}</div>
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center border-2 border-[var(--s1)]">
+                      <Icon.Plus className="w-2 h-2 text-white"/>
                     </div>
-                    {isOnline(u._id) && <span style={{ fontSize:11, fontWeight:700, color:'#22c55e', flexShrink:0 }}>Online</span>}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--text)]">My Status</div>
+                    <div className="text-xs text-[var(--muted)] mt-0.5">Tap to add update</div>
+                  </div>
+                </div>
+                {statuses.map((g, gi) => (
+                  <div key={gi} onClick={() => { setStatusView(gi); setOverlay('sv') }} className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[var(--border)] hover:bg-[var(--hover)]">
+                    <div className="w-12 h-12 rounded-full p-0.5 flex-shrink-0" style={{ background:'conic-gradient(#22c55e,#10b981,#22c55e)' }}>
+                      <Av name={g.user.name} src={g.user.avatar} size={43} className="border-2 border-[var(--s1)] rounded-full"/>
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text)]">{g.user._id === user._id ? 'My Status' : g.user.name}</div>
+                      <div className="text-xs text-[var(--muted)] mt-0.5">{g.statuses.length} update{g.statuses.length > 1 ? 's' : ''}</div>
+                    </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {overlay === 'sc' && <StatusCompose user={user} api={api} socket={socket} onClose={() => setOverlay(null)}/>}
-          {overlay === 'sv' && statuses[statusView] && <StatusViewer groups={statuses} user={user} onClose={() => setOverlay(null)}/>}
-
-          {/* PROFILE OVERLAY */}
-          {overlay === 'profile' && (
-            <div style={{ position:'absolute', inset:0, zIndex:40, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-              <div style={{ background:'var(--card)', borderRadius:20, width:'100%', maxWidth:380, overflow:'hidden', boxShadow:'var(--shadow)' }}>
-                <div style={{ background:'linear-gradient(135deg,#16a34a,#22c55e)', padding:'24px 20px 18px', textAlign:'center', position:'relative' }}>
-                  <button onClick={() => setOverlay(null)} style={{ position:'absolute', top:12, right:12, background:'rgba(255,255,255,.2)', border:'none', borderRadius:8, width:32, height:32, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <Icon.Close width={15} height={15} style={{ color:'#fff' }}/>
-                  </button>
-                  <Av name={user.name} src={user.avatar} size={64} style={{ margin:'0 auto 10px' }}/>
-                  <div style={{ fontSize:17, fontWeight:800, color:'#fff' }}>{user.name}</div>
-                  <div style={{ fontSize:13, color:'rgba(255,255,255,.7)', marginTop:3 }}>{user.phone || user.email}</div>
-                </div>
-                <div style={{ padding:'18px 20px' }}>
-                  {!profEdit ? (
-                    <>
-                      <div style={{ background:'var(--s2)', borderRadius:12, padding:13, marginBottom:13 }}>
-                        <div style={{ fontSize:11, fontWeight:700, color:'#22c55e', textTransform:'uppercase', letterSpacing:'.6px', marginBottom:4 }}>About</div>
-                        <div style={{ fontSize:14, color:'var(--text)' }}>{user.about || 'Hey there! I am using ChitChat 👋'}</div>
-                      </div>
-                      <button onClick={() => setProfEdit(true)}
-                        style={{ width:'100%', padding:13, background:'linear-gradient(135deg,#16a34a,#22c55e)', color:'#fff', border:'none', borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'var(--ff)' }}>
-                        Edit Profile
+              </>
+            : chats.filter(c => !c.isGroup).slice(0,5).map(chat => {
+                const o = getOther(chat, user._id)
+                return (
+                  <div key={chat._id} className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]">
+                    <Av name={o.name} src={o.avatar} online={isOnline(o._id)} size={46}/>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-[var(--text)]">{o.name}</div>
+                      <div className="text-xs text-green-500 mt-0.5">📞 Incoming · Today</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setActive(chat); setOverlay('voice') }} className="w-9 h-9 rounded-full bg-[var(--s2)] border-none cursor-pointer flex items-center justify-center">
+                        <Icon.Call className="w-4 h-4 text-green-500"/>
                       </button>
-                    </>
-                  ) : (
-                    <>
-                      {[{k:'name',l:'Name',p:'Your name'},{k:'about',l:'About',p:'Hey there!'},{k:'phone',l:'Phone',p:'9876543210'}].map(f => (
-                        <div key={f.k} style={{ marginBottom:13 }}>
-                          <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted2)', textTransform:'uppercase', letterSpacing:'.7px', marginBottom:5 }}>{f.l}</label>
-                          <input value={profForm[f.k]} onChange={e => setProfForm(p => ({...p,[f.k]:e.target.value}))} placeholder={f.p}
-                            style={{ width:'100%', border:'.5px solid var(--border)', borderRadius:10, background:'var(--inp)', padding:'11px 13px', fontSize:15, color:'var(--text)', outline:'none', fontFamily:'var(--ff)', boxSizing:'border-box' }}/>
-                        </div>
-                      ))}
-                      <div style={{ display:'flex', gap:10 }}>
-                        <button onClick={() => setProfEdit(false)}
-                          style={{ flex:1, padding:12, background:'var(--s2)', color:'var(--muted)', border:'none', borderRadius:11, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'var(--ff)' }}>
-                          Cancel
-                        </button>
-                        <button onClick={saveProfile}
-                          style={{ flex:1, padding:12, background:'linear-gradient(135deg,#16a34a,#22c55e)', color:'#fff', border:'none', borderRadius:11, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'var(--ff)' }}>
-                          Save
-                        </button>
-                      </div>
-                    </>
-                  )}
+                      <button onClick={() => { setActive(chat); setOverlay('video') }} className="w-9 h-9 rounded-full bg-[var(--s2)] border-none cursor-pointer flex items-center justify-center">
+                        <Icon.Video className="w-4 h-4 text-green-500"/>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+          }
+        </div>
+      </div>
+
+      {/* MAIN CHAT */}
+      <div className={`
+        flex-1 flex flex-col bg-[var(--bg)] relative overflow-hidden
+        md:translate-x-0
+        absolute inset-0 z-20
+        transition-transform duration-300
+        ${!showSidebar ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+      `}>
+        {/* Dot pattern bg */}
+        <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage:'radial-gradient(circle, var(--s3) 1px, transparent 1px)', backgroundSize:'24px 24px' }}/>
+
+        {active ? (
+          <>
+            {/* Chat Header */}
+            <div className="h-14 bg-[var(--s1)] px-3 flex items-center gap-2 border-b border-[var(--border)] z-10 flex-shrink-0 relative">
+              <button onClick={goBack}
+                className="w-9 h-9 rounded-xl bg-[var(--s2)] border-none cursor-pointer flex items-center justify-center flex-shrink-0 active:scale-95">
+                <Icon.Back className="w-5 h-5 text-[var(--text)]"/>
+              </button>
+              <Av name={chatName} src={active.isGroup ? active.groupAvatar : other?.avatar} online={!active.isGroup ? isOnline(other?._id) : undefined} size={36}/>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-[var(--text)] truncate leading-tight">{chatName}</div>
+                <div className={`text-xs font-medium leading-tight ${remoteType ? 'text-green-500' : 'text-[var(--muted)]'}`}>
+                  {remoteType ? 'typing...' : active.isGroup ? `${active.members?.length} members` : isOnline(other?._id) ? 'online' : other?.phone || ''}
                 </div>
               </div>
+              <div className="flex gap-1">
+                <IBtn icon={Icon.Video} onClick={() => setOverlay('video')} title="Video"/>
+                <IBtn icon={Icon.Call} onClick={() => setOverlay('voice')} title="Call"/>
+                <IBtn icon={Icon.More} title="More"/>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-0.5 relative z-[1]" style={{ WebkitOverflowScrolling:'touch' }}>
+              {loadMsg
+                ? <div className="flex justify-center py-10">
+                    <div className="w-6 h-6 border-2 border-green-500/20 border-t-green-500 rounded-full animate-spin"/>
+                  </div>
+                : messages.length === 0
+                ? <div className="flex-1 flex flex-col items-center justify-center gap-2 opacity-60">
+                    <Icon.Lock className="w-5 h-5 text-[var(--muted)]"/>
+                    <p className="text-xs text-[var(--muted)] font-medium">End-to-end encrypted</p>
+                  </div>
+                : messages.map((msg, i) => {
+                    const isMine = msg.sender?._id === user._id
+                    const prev = messages[i-1]
+                    const showName = active.isGroup && !isMine && prev?.sender?._id !== msg.sender?._id
+                    return <Bubble key={msg._id} msg={msg} isMine={isMine} showName={showName} onReply={setReplyTo} onDelete={deleteMsg}/>
+                  })
+              }
+              {remoteType && (
+                <div className="flex items-end gap-1.5">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-black mb-1 flex-shrink-0 text-[8px]" style={{ background:activeGrad }}>
+                    {initials(chatName)}
+                  </div>
+                  <div className="bg-[var(--in)] border border-[var(--in-border)] rounded-[0_14px_14px_14px] px-4 py-3">
+                    <div className="flex gap-1 items-center h-3">
+                      {[0,150,300].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full bg-[var(--muted)] animate-bounce" style={{ animationDelay:`${d}ms` }}/>)}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef}/>
+            </div>
+
+            {/* Reply bar */}
+            {replyTo && (
+              <div className="bg-[var(--s1)] border-t border-[var(--border)] px-3 py-2 flex items-center gap-3 z-10 flex-shrink-0">
+                <div className="flex-1 border-l-2 border-green-500 pl-2">
+                  <div className="text-xs font-bold text-green-500">{replyTo.sender?.name || 'You'}</div>
+                  <div className="text-xs text-[var(--muted)] truncate">{replyTo.content || '📎 Media'}</div>
+                </div>
+                <button onClick={() => setReplyTo(null)} className="border-none bg-transparent cursor-pointer text-[var(--muted)] text-lg p-1">✕</button>
+              </div>
+            )}
+
+            {/* Input */}
+            <div className="bg-[var(--s1)] px-2 py-2 flex items-center gap-2 border-t border-[var(--border)] relative z-10 flex-shrink-0">
+              <button onClick={() => setAttach(a => !a)}
+                className="w-10 h-10 rounded-full bg-[var(--s2)] flex items-center justify-center border-none cursor-pointer text-[var(--muted)] flex-shrink-0 active:scale-95">
+                <Icon.Attach className="w-5 h-5"/>
+              </button>
+              <div className="flex-1 bg-[var(--inp)] rounded-3xl flex items-center gap-2 px-4 py-2 border border-[var(--border)] min-h-[42px]">
+                <input value={text} onChange={handleTyping}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMsg())}
+                  placeholder="Message..."
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text)] min-w-0"/>
+                <button className="border-none bg-transparent cursor-pointer text-[var(--muted)] flex-shrink-0 p-0">
+                  <Icon.Emoji className="w-5 h-5"/>
+                </button>
+              </div>
+              <button onClick={() => text.trim() ? sendMsg() : sendMsg({ type:'voice', content:'', duration:`0:${Math.floor(Math.random()*50+5).toString().padStart(2,'0')}` })}
+                className="w-11 h-11 rounded-full bg-gradient-to-br from-green-700 to-green-500 flex items-center justify-center border-none cursor-pointer flex-shrink-0 shadow-lg shadow-green-500/30 active:scale-95">
+                {text.trim()
+                  ? <Icon.Send className="w-5 h-5 text-white ml-0.5"/>
+                  : <Icon.Mic className="w-5 h-5 text-white"/>
+                }
+              </button>
+              {attach && <AttachMenu onSend={(p) => sendMsg(p)} onClose={() => setAttach(false)}/>}
+            </div>
+
+            {(overlay === 'voice' || overlay === 'video') && (
+              <CallOverlay type={overlay} chat={active} user={user} isOnline={isOnline} onEnd={() => setOverlay(null)}/>
+            )}
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 relative z-[1]">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-700 to-green-500 flex items-center justify-center shadow-xl shadow-green-500/25">
+              <Icon.Chat className="w-8 h-8 text-white"/>
+            </div>
+            <div className="text-2xl font-black tracking-tight text-[var(--text)]">
+              Chit<span className="text-green-500">Chat</span>
+            </div>
+            <p className="text-sm text-[var(--muted)] text-center max-w-[220px] leading-relaxed">
+              Select a conversation or search for a user to start chatting.
+            </p>
+            <button onClick={() => setShowSidebar(true)}
+              className="md:hidden bg-gradient-to-r from-green-700 to-green-500 text-white border-none rounded-xl px-6 py-3 text-sm font-bold cursor-pointer mt-2 shadow-lg shadow-green-500/25">
+              View Chats
+            </button>
+          </div>
+        )}
+
+        {/* ADD MEMBER OVERLAY */}
+        {overlay === 'addmem' && (
+          <div className="absolute inset-0 z-40 flex flex-col bg-[var(--bg)]">
+            <div className="h-14 bg-[var(--s1)] px-4 flex items-center gap-3 border-b border-[var(--border)] flex-shrink-0">
+              <button onClick={() => setOverlay(null)} className="w-9 h-9 bg-[var(--s2)] rounded-xl border-none cursor-pointer flex items-center justify-center">
+                <Icon.Back className="w-5 h-5 text-[var(--text)]"/>
+              </button>
+              <span className="text-base font-bold text-[var(--text)]">New Chat</span>
+            </div>
+            <div className="px-4 py-3 border-b border-[var(--border)]">
+              <div className="text-xs text-[var(--muted)] mb-2 font-medium">Find by mobile number:</div>
+              <div className="flex gap-2">
+                <div className="flex-1 bg-[var(--s2)] border border-[var(--border)] rounded-xl flex items-center gap-2 px-3 py-2.5">
+                  <Icon.Call className="w-3.5 h-3.5 text-[var(--muted)] flex-shrink-0"/>
+                  <span className="text-sm text-[var(--muted)] font-bold">+91</span>
+                  <div className="w-px h-4 bg-[var(--border)]"/>
+                  <input value={addPhone} onChange={e => setAddPhone(e.target.value.replace(/\D/g,'').slice(0,10))} placeholder="Mobile number" inputMode="numeric"
+                    className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text)] min-w-0"/>
+                </div>
+                <button onClick={findUser} className="bg-green-500 text-white border-none rounded-xl px-4 text-sm font-bold cursor-pointer">Find</button>
+              </div>
+              {foundUser && (
+                <div className="mt-3 bg-green-500/5 border border-green-500/20 rounded-xl p-3 flex items-center gap-3">
+                  <Av name={foundUser.name} src={foundUser.avatar} size={40}/>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-[var(--text)]">{foundUser.name}</div>
+                    <div className="text-xs text-green-500 mt-0.5">{foundUser.phone}</div>
+                  </div>
+                  <button onClick={() => { startDM(foundUser._id); setFoundUser(null); setAddPhone('') }}
+                    className="bg-green-500 text-white border-none rounded-lg px-3 py-2 text-xs font-bold cursor-pointer">Chat</button>
+                </div>
+              )}
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="text-[10px] font-bold text-[var(--muted2)] px-4 py-2 uppercase tracking-wider">All Contacts</div>
+              {allUsers.map(u => (
+                <div key={u._id} onClick={() => startDM(u._id)}
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[var(--border)] hover:bg-[var(--hover)]">
+                  <Av name={u.name} src={u.avatar} online={isOnline(u._id)} size={46}/>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-[var(--text)]">{u.name}</div>
+                    <div className="text-xs text-[var(--muted)] mt-0.5">{u.phone || u.email}</div>
+                  </div>
+                  {isOnline(u._id) && <span className="text-[10px] font-bold text-green-500 flex-shrink-0">Online</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {overlay === 'sc' && <StatusCompose user={user} api={api} socket={socket} onClose={() => setOverlay(null)}/>}
+        {overlay === 'sv' && statuses[statusView] && <StatusViewer groups={statuses} user={user} onClose={() => setOverlay(null)}/>}
+
+        {/* PROFILE OVERLAY */}
+        {overlay === 'profile' && (
+          <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-4">
+            <div className="bg-[var(--card)] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+              <div className="bg-gradient-to-br from-green-700 to-green-500 p-6 text-center relative">
+                <button onClick={() => setOverlay(null)} className="absolute top-3 right-3 w-8 h-8 bg-white/20 border-none rounded-lg cursor-pointer flex items-center justify-center">
+                  <Icon.Close className="w-4 h-4 text-white"/>
+                </button>
+                <Av name={user.name} src={user.avatar} size={64} className="mx-auto mb-3"/>
+                <div className="text-lg font-black text-white">{user.name}</div>
+                <div className="text-sm text-white/70 mt-1">{user.phone || user.email}</div>
+              </div>
+              <div className="p-5">
+                {!profEdit ? (
+                  <>
+                    <div className="bg-[var(--s2)] rounded-xl p-3 mb-4">
+                      <div className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">About</div>
+                      <div className="text-sm text-[var(--text)]">{user.about || 'Hey there! I am using ChitChat 👋'}</div>
+                    </div>
+                    <button onClick={() => setProfEdit(true)}
+                      className="w-full py-3 bg-gradient-to-r from-green-700 to-green-500 text-white border-none rounded-xl text-sm font-bold cursor-pointer">
+                      Edit Profile
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {[{k:'name',l:'Name',p:'Your name'},{k:'about',l:'About',p:'Hey there!'},{k:'phone',l:'Phone',p:'9876543210'}].map(f => (
+                      <div key={f.k} className="mb-3">
+                        <label className="block text-[10px] font-bold text-[var(--muted2)] uppercase tracking-wider mb-1">{f.l}</label>
+                        <input value={profForm[f.k]} onChange={e => setProfForm(p => ({...p,[f.k]:e.target.value}))} placeholder={f.p}
+                          className="w-full border border-[var(--border)] rounded-xl bg-[var(--inp)] px-3 py-2.5 text-sm text-[var(--text)] outline-none"/>
+                      </div>
+                    ))}
+                    <div className="flex gap-3 mt-4">
+                      <button onClick={() => setProfEdit(false)}
+                        className="flex-1 py-3 bg-[var(--s2)] text-[var(--muted)] border-none rounded-xl text-sm font-bold cursor-pointer">Cancel</button>
+                      <button onClick={saveProfile}
+                        className="flex-1 py-3 bg-gradient-to-r from-green-700 to-green-500 text-white border-none rounded-xl text-sm font-bold cursor-pointer">Save</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
