@@ -1,7 +1,7 @@
 import { useAuth } from './context/AuthContext'
 import { SocketProvider } from './context/SocketContext'
 import AuthPage from './pages/AuthPage'
-import ChatPage from './ChatPage'
+import ChatPage from './pages/ChatPage'
 
 export default function App() {
   const { user, loading } = useAuth()
