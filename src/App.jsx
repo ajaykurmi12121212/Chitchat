@@ -3,7 +3,7 @@ import { SocketProvider } from './context/SocketContext'
 import AuthPage from './pages/AuthPage'
 import ChatPage from './ChatPage'
 
-export default function App() {s
+export default function App() {
   const { user, loading } = useAuth()
 
   if (loading) return (
