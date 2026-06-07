@@ -1,24 +1,18 @@
-// ─────────────────────────────────────────
-//  ChatPage.jsx  — PURE LOGIC ONLY
-//  Zero UI here. All rendering → components.
-// ─────────────────────────────────────────
+
 import { useState, useEffect } from 'react'
-import { useAuth }   from '../context/AuthContext'
-import { useSocket } from '../context/SocketContext'
-import { useTheme }  from '../context/ThemeContext'
 
-// Layout components
-import Sidebar       from '../components/sidebar/Sidebar'
-import ChatWindow    from '../components/chat/ChatWindow'
-import EmptyState    from '../components/chat/EmptyState'
+import { useAuth }   from './context/AuthContext'
+import { useSocket } from './context/SocketContext'
+import { useTheme }  from './context/ThemeContext'
+import Sidebar       from './components/sidebar/Sidebar'
+import ChatWindow    from './components/chat/ChatWindow'
+import EmptyState    from './components/chat/EmptyState'
+import ProfileOverlay  from './components/overlays/ProfileOverlay'
+import NewChatOverlay  from './components/overlays/NewChatOverlay'
+import { StatusViewer, StatusCompose } from './components/overlays/CallStatusOverlays'
+import { getOther } from './components/shared/utils'
 
-// Overlay components
-import ProfileOverlay  from '../components/overlays/ProfileOverlay'
-import NewChatOverlay  from '../components/overlays/NewChatOverlay'
-import { StatusViewer, StatusCompose } from '../components/overlays/CallStatusOverlays'
 
-// Utilities
-import { getOther } from '../components/shared/utils'
 
 export default function ChatPage() {
   const { user, api, logout, updateUser } = useAuth()
@@ -316,4 +310,6 @@ export default function ChatPage() {
     </div>
   )
 }
+
+
 
