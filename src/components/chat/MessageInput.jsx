@@ -119,7 +119,10 @@ export default function MessageInput({ replyTo, onClearReply, onSend, socket, ac
     <>
       {replyTo && <ReplyBar replyTo={replyTo} onClear={onClearReply} />}
 
-      <div className="bg-[var(--s1)] px-2 py-2 flex items-center gap-2 border-t border-[var(--border)] relative z-10 flex-shrink-0">
+      <div
+        className="bg-[var(--s1)] px-2 pt-2 flex items-center gap-2 border-t border-[var(--border)] relative z-10 flex-shrink-0"
+        style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <button
           onClick={() => setAttach(a => !a)}
           className="w-10 h-10 rounded-full bg-[var(--s2)] flex items-center justify-center border-none cursor-pointer text-[var(--muted)] flex-shrink-0 active:scale-95 transition-transform"

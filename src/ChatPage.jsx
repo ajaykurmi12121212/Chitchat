@@ -202,7 +202,10 @@ export default function ChatPage() {
 
   // ── Render ─────────────────────────────
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[var(--bg)] font-[var(--ff)]">
+    <div
+      className="flex h-[100dvh] overflow-hidden bg-[var(--bg)] font-[var(--ff)]"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
       <style>{`
         .msg-menu-btn { opacity: 0 }
         .mr:hover .msg-menu-btn { opacity: 1 !important }
@@ -236,7 +239,8 @@ export default function ChatPage() {
       {/* ══ MAIN AREA ════════════════════════════ */}
       <div className={`
         flex-1 flex flex-col bg-[var(--bg)] relative overflow-hidden
-        md:translate-x-0 absolute inset-0 z-20 transition-transform duration-300
+        md:static md:translate-x-0
+        absolute inset-0 z-20 transition-transform duration-300
         ${!showSidebar ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
       `}>
         {/* Dot pattern bg */}

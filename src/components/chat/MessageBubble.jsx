@@ -22,9 +22,10 @@ function MediaBubble({ msg }) {
   if (msg.type === 'video') return (
     <div className="w-[220px] rounded-xl overflow-hidden">
       {msg.fileUrl
-        ? <video src={msg.fileUrl} controls className="w-full max-h-[180px] block" />
-        : <div className="h-28 bg-[var(--s3)] flex items-center justify-center">
+        ? <video src={msg.fileUrl} controls className="w-full max-h-[180px] block bg-black" />
+        : <div className="h-28 bg-[var(--s3)] flex items-center justify-center flex-col gap-1">
             <Icon.Video className="w-8 h-8 text-[var(--muted2)]" />
+            <span className="text-[10px] text-[var(--muted)]">Video unavailable</span>
           </div>}
     </div>
   )
