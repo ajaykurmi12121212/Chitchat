@@ -79,3 +79,15 @@ body {
 /* Fade in */
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
 .fade-up { animation: fadeUp .25s ease; }
+/* Mobile browser chrome ke saath sahi kaam kare */
+html, body, #root {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* iOS safe area support */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
