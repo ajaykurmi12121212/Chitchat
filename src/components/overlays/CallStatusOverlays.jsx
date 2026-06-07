@@ -51,12 +51,8 @@ export function CallOverlay({ type, chat, user, isOnline, onEnd }) {
   )
 }
 
-// ─────────────────────────────────────────
-//  StatusViewer.jsx
-// ─────────────────────────────────────────
-import { Icon } from '../Icons'
-import Avatar from '../shared/Avatar'
-import { timeOnly } from '../shared/utils'
+
+
 
 export function StatusViewer({ groups, user, onClose }) {
   const [gi, setGi] = useState(0)
