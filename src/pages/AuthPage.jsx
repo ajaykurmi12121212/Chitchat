@@ -38,7 +38,6 @@ export default function AuthPage() {
   const [confirmation, setConfirmation] = useState(null)
   const timerRef = useRef(null)
   const boxRefs  = useRef([])
-  const recapRef = useRef(null)
 
   useEffect(() => () => clearInterval(timerRef.current), [])
 
@@ -50,13 +49,16 @@ export default function AuthPage() {
   }
 
   const setupRecaptcha = () => {
-    if (!recapRef.current) {
-      recapRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {},
-      })
-    }
-    return recapRef.current
+    // Reuse existing verifier
+    if (window.recaptchaVerifier) return window.recaptchaVerifier
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => {},
+      'expired-callback': () => {
+        window.recaptchaVerifier = null
+      }
+    })
+    return window.recaptchaVerifier
   }
 
   const sendOTP = async (e) => {
@@ -73,8 +75,7 @@ export default function AuthPage() {
       setTimeout(() => boxRefs.current[0]?.focus(), 100)
     } catch (err) {
       console.error(err)
-      // Reset recaptcha on error
-      recapRef.current = null
+      window.recaptchaVerifier = null
       setError(err.message || 'OTP bhejne mein error. Dobara try karo.')
     } finally {
       setLoad(false)
@@ -189,7 +190,14 @@ export default function AuthPage() {
         {screen === 'otp' && (
           <div className="fade">
             <div style={S.top}>
-              <button onClick={() => { setScreen('phone'); setOtp(['','','','','','']); setError(''); clearInterval(timerRef.current); setConfirmation(null); recapRef.current = null }}
+              <button onClick={() => {
+                setScreen('phone')
+                setOtp(['','','','','',''])
+                setError('')
+                clearInterval(timerRef.current)
+                setConfirmation(null)
+                window.recaptchaVerifier = null
+              }}
                 style={{ display:'flex', alignItems:'center', gap:5, fontSize:13, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', marginBottom:22, padding:0, fontWeight:600 }}>
                 ← Change Number
               </button>
