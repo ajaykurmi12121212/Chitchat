@@ -49,17 +49,20 @@ export default function AuthPage() {
   }
 
   const setupRecaptcha = () => {
-    // Reuse existing verifier
-    if (window.recaptchaVerifier) return window.recaptchaVerifier
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible',
-      callback: () => {},
-      'expired-callback': () => {
-        window.recaptchaVerifier = null
-      }
-    })
-    return window.recaptchaVerifier
+  // Pehle purana destroy karo
+  if (window.recaptchaVerifier) {
+    try {
+      window.recaptchaVerifier.clear()
+    } catch(e) {}
+    window.recaptchaVerifier = null
   }
+  
+  window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    size: 'invisible',
+    callback: () => {},
+  })
+  return window.recaptchaVerifier
+}
 
   const sendOTP = async (e) => {
     e?.preventDefault()
