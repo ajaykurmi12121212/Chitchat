@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { auth } from '../firebase'
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth'
 
 const S = {
   page: { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'var(--bg)', transition:'background .25s' },
@@ -26,15 +28,17 @@ function Spin() {
 export default function AuthPage() {
   const { phoneLogin } = useAuth()
   const { theme, toggle } = useTheme()
-  const [screen, setScreen] = useState('phone')
-  const [name,   setName]   = useState('')
-  const [phone,  setPhone]  = useState('')
-  const [otp,    setOtp]    = useState(['','','','','',''])
-  const [timer,  setTimer]  = useState(0)
-  const [load,   setLoad]   = useState(false)
-  const [error,  setError]  = useState('')
+  const [screen,       setScreen]       = useState('phone')
+  const [name,         setName]         = useState('')
+  const [phone,        setPhone]        = useState('')
+  const [otp,          setOtp]          = useState(['','','','','',''])
+  const [timer,        setTimer]        = useState(0)
+  const [load,         setLoad]         = useState(false)
+  const [error,        setError]        = useState('')
+  const [confirmation, setConfirmation] = useState(null)
   const timerRef = useRef(null)
   const boxRefs  = useRef([])
+  const recapRef = useRef(null)
 
   useEffect(() => () => clearInterval(timerRef.current), [])
 
@@ -45,29 +49,53 @@ export default function AuthPage() {
       setTimer(t => { if (t <= 1) { clearInterval(timerRef.current); return 0 } return t - 1 }), 1000)
   }
 
+  const setupRecaptcha = () => {
+    if (!recapRef.current) {
+      recapRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => {},
+      })
+    }
+    return recapRef.current
+  }
+
   const sendOTP = async (e) => {
     e?.preventDefault()
     if (!name.trim()) return setError('Please enter your name')
     if (phone.length !== 10) return setError('Enter valid 10-digit number')
     setError(''); setLoad(true)
-    setTimeout(() => {
-      setLoad(false); setScreen('otp'); startTimer()
+    try {
+      const verifier = setupRecaptcha()
+      const result   = await signInWithPhoneNumber(auth, `+91${phone}`, verifier)
+      setConfirmation(result)
+      setScreen('otp')
+      startTimer()
       setTimeout(() => boxRefs.current[0]?.focus(), 100)
-    }, 800)
+    } catch (err) {
+      console.error(err)
+      // Reset recaptcha on error
+      recapRef.current = null
+      setError(err.message || 'OTP bhejne mein error. Dobara try karo.')
+    } finally {
+      setLoad(false)
+    }
   }
 
   const verifyOTP = async () => {
     const code = otp.join('')
-    if (code.length !== 6) return
+    if (code.length !== 6 || !confirmation) return
     setError(''); setLoad(true)
     try {
+      await confirmation.confirm(code)
       await phoneLogin(phone, name)
       setScreen('success')
     } catch (err) {
-      setError(err.response?.data?.message || 'Verification failed. Try again.')
+      setError('Galat OTP. Dobara try karo.')
       setOtp(['','','','','',''])
       setTimeout(() => boxRefs.current[0]?.focus(), 100)
-    } finally { setLoad(false) }
+    } finally {
+      setLoad(false)
+    }
   }
 
   const handleOtp = (val, i) => {
@@ -95,10 +123,16 @@ export default function AuthPage() {
   return (
     <div style={S.page}>
       <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes fade { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+        .fade { animation: fade .25s ease }
         input:focus { border-color: rgba(34,197,94,.5) !important; }
         .otp-inp:focus { border-color:#22c55e !important; box-shadow:0 0 0 3px rgba(34,197,94,.15) !important; background:rgba(34,197,94,.06) !important; }
         .hover-btn:hover { background:var(--hover) !important; color:var(--text) !important; }
       `}</style>
+
+      {/* Invisible reCAPTCHA container */}
+      <div id="recaptcha-container" />
 
       {/* Theme toggle */}
       <button onClick={toggle} className="hover-btn" style={{ position:'fixed', top:18, right:18, width:40, height:40, borderRadius:12, background:'var(--s1)', border:'.5px solid var(--border)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)', transition:'all .2s', zIndex:99 }}>
@@ -107,7 +141,7 @@ export default function AuthPage() {
 
       <div style={S.card}>
 
-        {/* ── PHONE ── */}
+        {/* ── PHONE SCREEN ── */}
         {screen === 'phone' && (
           <div className="fade">
             <div style={S.top}>
@@ -147,23 +181,15 @@ export default function AuthPage() {
                   {load ? <><Spin/>Sending OTP...</> : 'Get OTP →'}
                 </button>
               </form>
-
-              <div style={{ marginTop:18, background:'var(--s2)', border:'.5px solid var(--border)', borderRadius:11, padding:'12px 14px', display:'flex', gap:10 }}>
-                <span style={{ fontSize:14, flexShrink:0 }}>🔒</span>
-                <p style={{ fontSize:12, color:'var(--muted)', lineHeight:1.6 }}>
-                  <strong style={{ color:'var(--text)' }}>Demo mode</strong> — koi bhi 6 digits kaam karenge.<br/>
-                  Firebase config add karo .env mein real OTP ke liye.
-                </p>
-              </div>
             </div>
           </div>
         )}
 
-        {/* ── OTP ── */}
+        {/* ── OTP SCREEN ── */}
         {screen === 'otp' && (
           <div className="fade">
             <div style={S.top}>
-              <button onClick={() => { setScreen('phone'); setOtp(['','','','','','']); setError(''); clearInterval(timerRef.current) }}
+              <button onClick={() => { setScreen('phone'); setOtp(['','','','','','']); setError(''); clearInterval(timerRef.current); setConfirmation(null); recapRef.current = null }}
                 style={{ display:'flex', alignItems:'center', gap:5, fontSize:13, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', marginBottom:22, padding:0, fontWeight:600 }}>
                 ← Change Number
               </button>
@@ -174,13 +200,6 @@ export default function AuthPage() {
             </div>
 
             <div style={S.body}>
-              <div style={{ background:'var(--s2)', border:'.5px solid var(--border)', borderRadius:11, padding:'12px 14px', marginBottom:22, display:'flex', gap:10 }}>
-                <span>📱</span>
-                <p style={{ fontSize:13, color:'var(--muted)', lineHeight:1.6 }}>
-                  <strong style={{ color:'#f59e0b' }}>Demo mode</strong> — koi bhi 6 digits enter karo.
-                </p>
-              </div>
-
               <div style={{ display:'flex', gap:9, justifyContent:'center', marginBottom:22 }} onPaste={handlePaste}>
                 {otp.map((d, i) => (
                   <input key={i} ref={el => boxRefs.current[i] = el}
@@ -212,7 +231,7 @@ export default function AuthPage() {
           </div>
         )}
 
-        {/* ── SUCCESS ── */}
+        {/* ── SUCCESS SCREEN ── */}
         {screen === 'success' && (
           <div className="fade" style={S.body}>
             <div style={{ textAlign:'center', padding:'16px 0' }}>
