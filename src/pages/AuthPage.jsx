@@ -1,41 +1,26 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { auth } from '../firebase'
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth'
 
-const S = {
-  page: { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'var(--bg)', transition:'background .25s' },
-  card: { background:'var(--s1)', border:'.5px solid var(--border)', borderRadius:22, width:'100%', maxWidth:400, overflow:'hidden', boxShadow:'var(--shadow)' },
-  top:  { padding:'32px 30px 26px', borderBottom:'.5px solid var(--border)' },
-  body: { padding:'28px 30px 32px' },
-  label:{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted2)', letterSpacing:'.8px', textTransform:'uppercase', marginBottom:7 },
-  inp:  { width:'100%', border:'.5px solid var(--border)', borderRadius:11, background:'var(--inp)', padding:'12px 14px', fontSize:14, color:'var(--text)', outline:'none', fontFamily:'inherit', transition:'border-color .15s' },
-  pWrap:{ display:'flex', border:'.5px solid var(--border)', borderRadius:11, overflow:'hidden', background:'var(--inp)' },
-  cc:   { display:'flex', alignItems:'center', gap:6, padding:'0 13px', borderRight:'.5px solid var(--border)', fontSize:13, fontWeight:700, color:'var(--muted)', whiteSpace:'nowrap', flexShrink:0 },
-  pIn:  { flex:1, border:'none', background:'transparent', padding:'13px 13px', fontSize:15, color:'var(--text)', outline:'none', fontFamily:'inherit', letterSpacing:'.5px' },
-  btn:  { width:'100%', padding:'13px', borderRadius:12, border:'none', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'all .15s' },
-  btnA: { background:'linear-gradient(135deg,#16a34a,#22c55e)', color:'#fff', boxShadow:'0 6px 20px rgba(34,197,94,.25)' },
-  btnD: { background:'var(--s2)', color:'var(--muted2)', cursor:'not-allowed' },
-  err:  { background:'rgba(239,68,68,.08)', border:'.5px solid rgba(239,68,68,.2)', borderRadius:10, padding:'10px 13px', fontSize:13, color:'#f87171', display:'flex', alignItems:'center', gap:8, marginBottom:16 },
-  oBox: { width:48, height:56, border:'.5px solid var(--border)', borderRadius:11, fontSize:22, fontWeight:700, textAlign:'center', color:'var(--text)', background:'var(--inp)', outline:'none', fontFamily:'inherit', transition:'all .15s' },
+function Spinner() {
+  return (
+    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin flex-shrink-0" />
+  )
 }
 
-function Spin() {
-  return <div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,.25)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin .6s linear infinite', flexShrink:0 }}/>
-}
-
-export default function AuthPage() {
-  const { phoneLogin } = useAuth()
+export default function LoginPage() {
+  const { sendOTP, verifyOTP } = useAuth()
   const { theme, toggle } = useTheme()
-  const [screen,       setScreen]       = useState('phone')
-  const [name,         setName]         = useState('')
-  const [phone,        setPhone]        = useState('')
-  const [otp,          setOtp]          = useState(['','','','','',''])
-  const [timer,        setTimer]        = useState(0)
-  const [load,         setLoad]         = useState(false)
-  const [error,        setError]        = useState('')
-  const [confirmation, setConfirmation] = useState(null)
+  const isDark = theme === 'dark'
+
+  const [screen, setScreen] = useState('phone')
+  const [name,   setName]   = useState('')
+  const [phone,  setPhone]  = useState('')
+  const [otp,    setOtp]    = useState(['', '', '', '', '', ''])
+  const [timer,  setTimer]  = useState(0)
+  const [load,   setLoad]   = useState(false)
+  const [error,  setError]  = useState('')
+
   const timerRef = useRef(null)
   const boxRefs  = useRef([])
 
@@ -45,144 +30,189 @@ export default function AuthPage() {
     clearInterval(timerRef.current)
     setTimer(30)
     timerRef.current = setInterval(() =>
-      setTimer(t => { if (t <= 1) { clearInterval(timerRef.current); return 0 } return t - 1 }), 1000)
+      setTimer(t => {
+        if (t <= 1) { clearInterval(timerRef.current); return 0 }
+        return t - 1
+      }), 1000)
   }
 
-  const setupRecaptcha = () => {
-  // Pehle purana destroy karo
-  if (window.recaptchaVerifier) {
-    try {
-      window.recaptchaVerifier.clear()
-    } catch(e) {}
-    window.recaptchaVerifier = null
-  }
-  
-  window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    size: 'invisible',
-    callback: () => {},
-  })
-  return window.recaptchaVerifier
-}
-
-  const sendOTP = async (e) => {
+  const handleSendOTP = async (e) => {
     e?.preventDefault()
     if (!name.trim()) return setError('Please enter your name')
     if (phone.length !== 10) return setError('Enter valid 10-digit number')
-    setError(''); setLoad(true)
+    setError('')
+    setLoad(true)
     try {
-      const verifier = setupRecaptcha()
-      const result   = await signInWithPhoneNumber(auth, `+91${phone}`, verifier)
-      setConfirmation(result)
+      await sendOTP(phone)
       setScreen('otp')
       startTimer()
       setTimeout(() => boxRefs.current[0]?.focus(), 100)
     } catch (err) {
-      console.error(err)
-      window.recaptchaVerifier = null
-      setError(err.message || 'OTP bhejne mein error. Dobara try karo.')
+      setError(err.response?.data?.message || 'OTP bhejne mein error. Dobara try karo.')
     } finally {
       setLoad(false)
     }
   }
 
-  const verifyOTP = async () => {
+  const handleVerifyOTP = async () => {
     const code = otp.join('')
-    if (code.length !== 6 || !confirmation) return
-    setError(''); setLoad(true)
+    if (code.length !== 6) return
+    setError('')
+    setLoad(true)
     try {
-      await confirmation.confirm(code)
-      await phoneLogin(phone, name)
+      await verifyOTP(phone, code, name)
       setScreen('success')
     } catch (err) {
-      setError('Galat OTP. Dobara try karo.')
-      setOtp(['','','','','',''])
+      setError(err.response?.data?.message || 'Galat OTP. Dobara try karo.')
+      setOtp(['', '', '', '', '', ''])
       setTimeout(() => boxRefs.current[0]?.focus(), 100)
     } finally {
       setLoad(false)
     }
   }
 
-  const handleOtp = (val, i) => {
+  const handleOtpChange = (val, i) => {
     if (!/^\d?$/.test(val)) return
-    const next = [...otp]; next[i] = val; setOtp(next)
-    if (val && i < 5) boxRefs.current[i+1]?.focus()
-    if (next.every(d => d)) setTimeout(verifyOTP, 80)
+    const next = [...otp]
+    next[i] = val
+    setOtp(next)
+    if (val && i < 5) boxRefs.current[i + 1]?.focus()
+    if (next.every(d => d)) setTimeout(handleVerifyOTP, 80)
   }
 
-  const handleKey = (e, i) => {
+  const handleOtpKey = (e, i) => {
     if (e.key === 'Backspace' && !otp[i] && i > 0) {
-      boxRefs.current[i-1]?.focus()
-      const next = [...otp]; next[i-1] = ''; setOtp(next)
+      boxRefs.current[i - 1]?.focus()
+      const next = [...otp]
+      next[i - 1] = ''
+      setOtp(next)
     }
   }
 
   const handlePaste = (e) => {
-    const d = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6)
-    if (d.length === 6) { setOtp(d.split('')); setTimeout(verifyOTP, 80) }
+    const d = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (d.length === 6) {
+      setOtp(d.split(''))
+      setTimeout(handleVerifyOTP, 80)
+    }
     e.preventDefault()
   }
 
-  const isDark = theme === 'dark'
+  const goBack = () => {
+    setScreen('phone')
+    setOtp(['', '', '', '', '', ''])
+    setError('')
+    clearInterval(timerRef.current)
+    setTimer(0)
+  }
 
   return (
-    <div style={S.page}>
+    <div className="min-h-screen flex items-center justify-center p-5 bg-[var(--bg)] transition-colors duration-300">
+
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg) } }
-        @keyframes fade { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
-        .fade { animation: fade .25s ease }
-        input:focus { border-color: rgba(34,197,94,.5) !important; }
-        .otp-inp:focus { border-color:#22c55e !important; box-shadow:0 0 0 3px rgba(34,197,94,.15) !important; background:rgba(34,197,94,.06) !important; }
-        .hover-btn:hover { background:var(--hover) !important; color:var(--text) !important; }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(8px) }
+          to   { opacity: 1; transform: translateY(0) }
+        }
+        .fade-up { animation: fadeUp 0.25s ease forwards }
       `}</style>
 
-      {/* Invisible reCAPTCHA container */}
-      <div id="recaptcha-container" />
-
-      {/* Theme toggle */}
-      <button onClick={toggle} className="hover-btn" style={{ position:'fixed', top:18, right:18, width:40, height:40, borderRadius:12, background:'var(--s1)', border:'.5px solid var(--border)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)', transition:'all .2s', zIndex:99 }}>
+      {/* Theme Toggle */}
+      <button
+        onClick={toggle}
+        className="fixed top-4 right-4 w-10 h-10 rounded-xl bg-[var(--s1)] border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:bg-[var(--hover)] transition-all z-50"
+      >
         {isDark ? '☀️' : '🌙'}
       </button>
 
-      <div style={S.card}>
+      {/* Card */}
+      <div className="w-full max-w-sm bg-[var(--s1)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-[var(--shadow)]">
 
         {/* ── PHONE SCREEN ── */}
         {screen === 'phone' && (
-          <div className="fade">
-            <div style={S.top}>
-              <div style={{ display:'flex', alignItems:'center', gap:11, marginBottom:26 }}>
-                <div style={{ width:40, height:40, borderRadius:11, background:'linear-gradient(135deg,#16a34a,#22c55e)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, boxShadow:'0 5px 14px rgba(34,197,94,.28)', flexShrink:0 }}>💬</div>
+          <div className="fade-up">
+            {/* Header */}
+            <div className="px-7 pt-8 pb-6 border-b border-[var(--border)]">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-700 to-green-500 flex items-center justify-center text-xl shadow-lg shadow-green-500/25 flex-shrink-0">
+                  💬
+                </div>
                 <div>
-                  <div style={{ fontSize:18, fontWeight:800, letterSpacing:'-.5px', color:'var(--text)' }}>Chit<span style={{ color:'#22c55e' }}>Chat</span></div>
-                  <div style={{ fontSize:11, color:'var(--muted2)', fontWeight:600 }}>Simple · Reliable · Private</div>
+                  <div className="text-lg font-black tracking-tight text-[var(--text)]">
+                    Chit<span className="text-green-500">Chat</span>
+                  </div>
+                  <div className="text-[10px] font-semibold text-[var(--muted2)] tracking-wide">
+                    Simple · Reliable · Private
+                  </div>
                 </div>
               </div>
-              <h1 style={{ fontSize:22, fontWeight:800, color:'var(--text)', letterSpacing:'-.5px', marginBottom:7 }}>Enter your number</h1>
-              <p style={{ fontSize:14, color:'var(--muted)', lineHeight:1.6 }}>We'll send a one-time code to verify your identity.</p>
+              <h1 className="text-2xl font-black tracking-tight text-[var(--text)] mb-2">
+                Enter your number
+              </h1>
+              <p className="text-sm text-[var(--muted)] leading-relaxed">
+                We'll send a one-time code to verify your identity.
+              </p>
             </div>
 
-            <div style={S.body}>
-              <form onSubmit={sendOTP} style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            {/* Body */}
+            <div className="px-7 py-7">
+              <form onSubmit={handleSendOTP} className="flex flex-col gap-4">
+                {/* Name */}
                 <div>
-                  <label style={S.label}>Your Name</label>
-                  <input value={name} onChange={e => { setName(e.target.value); setError('') }}
-                    placeholder="Rahul Sharma" autoFocus style={S.inp}/>
+                  <label className="block text-[10px] font-bold text-[var(--muted2)] uppercase tracking-[0.8px] mb-1.5">
+                    Your Name
+                  </label>
+                  <input
+                    value={name}
+                    onChange={e => { setName(e.target.value); setError('') }}
+                    placeholder="Rahul Sharma"
+                    autoFocus
+                    className="w-full bg-[var(--inp)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-[var(--text)] placeholder-[var(--muted2)] outline-none focus:border-green-500/50 transition-colors"
+                  />
                 </div>
+
+                {/* Phone */}
                 <div>
-                  <label style={S.label}>Mobile Number</label>
-                  <div style={{ ...S.pWrap, ...(phone.length===10 ? { borderColor:'rgba(34,197,94,.4)' } : {}) }}>
-                    <div style={S.cc}>🇮🇳 +91</div>
-                    <input type="tel" inputMode="numeric" maxLength={10}
-                      value={phone} onChange={e => { setPhone(e.target.value.replace(/\D/g,'').slice(0,10)); setError('') }}
-                      placeholder="98765 43210" style={S.pIn}/>
-                    {phone.length===10 && <div style={{ display:'flex', alignItems:'center', paddingRight:13, color:'#22c55e', fontSize:18 }}>✓</div>}
+                  <label className="block text-[10px] font-bold text-[var(--muted2)] uppercase tracking-[0.8px] mb-1.5">
+                    Mobile Number
+                  </label>
+                  <div className={`flex border rounded-xl overflow-hidden bg-[var(--inp)] transition-colors ${phone.length === 10 ? 'border-green-500/40' : 'border-[var(--border)]'}`}>
+                    <div className="flex items-center gap-1.5 px-3 border-r border-[var(--border)] text-sm font-bold text-[var(--muted)] whitespace-nowrap flex-shrink-0">
+                      🇮🇳 +91
+                    </div>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={phone}
+                      onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
+                      placeholder="98765 43210"
+                      className="flex-1 bg-transparent border-none outline-none px-3 py-3 text-[15px] text-[var(--text)] placeholder-[var(--muted2)] tracking-wide"
+                    />
+                    {phone.length === 10 && (
+                      <div className="flex items-center pr-3 text-green-500 text-lg">✓</div>
+                    )}
                   </div>
                 </div>
 
-                {error && <div style={S.err}><span>⚠</span>{error}</div>}
+                {/* Error */}
+                {error && (
+                  <div className="flex items-center gap-2 bg-red-500/8 border border-red-500/20 rounded-xl px-3 py-2.5 text-sm text-red-400">
+                    <span>⚠</span><span>{error}</span>
+                  </div>
+                )}
 
-                <button type="submit" disabled={load || phone.length!==10 || !name.trim()}
-                  style={{ ...S.btn, ...(load || phone.length!==10 || !name.trim() ? S.btnD : S.btnA) }}>
-                  {load ? <><Spin/>Sending OTP...</> : 'Get OTP →'}
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={load || phone.length !== 10 || !name.trim()}
+                  className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                    load || phone.length !== 10 || !name.trim()
+                      ? 'bg-[var(--s2)] text-[var(--muted2)] cursor-not-allowed'
+                      : 'bg-gradient-to-r from-green-700 to-green-500 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-[1.01] active:scale-[0.99]'
+                  }`}
+                >
+                  {load ? <><Spinner />Sending OTP...</> : 'Get OTP →'}
                 </button>
               </form>
             </div>
@@ -191,52 +221,93 @@ export default function AuthPage() {
 
         {/* ── OTP SCREEN ── */}
         {screen === 'otp' && (
-          <div className="fade">
-            <div style={S.top}>
-              <button onClick={() => {
-                setScreen('phone')
-                setOtp(['','','','','',''])
-                setError('')
-                clearInterval(timerRef.current)
-                setConfirmation(null)
-                window.recaptchaVerifier = null
-              }}
-                style={{ display:'flex', alignItems:'center', gap:5, fontSize:13, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', marginBottom:22, padding:0, fontWeight:600 }}>
+          <div className="fade-up">
+            {/* Header */}
+            <div className="px-7 pt-7 pb-6 border-b border-[var(--border)]">
+              <button
+                onClick={goBack}
+                className="flex items-center gap-1.5 text-sm text-[var(--muted)] font-semibold bg-none border-none cursor-pointer mb-5 hover:text-[var(--text)] transition-colors"
+              >
                 ← Change Number
               </button>
-              <h1 style={{ fontSize:22, fontWeight:800, color:'var(--text)', letterSpacing:'-.5px', marginBottom:7 }}>Verify OTP</h1>
-              <p style={{ fontSize:14, color:'var(--muted)', lineHeight:1.6 }}>
-                Code sent to <strong style={{ color:'var(--text)' }}>+91 {phone.slice(0,5)} {phone.slice(5)}</strong>
+              <h1 className="text-2xl font-black tracking-tight text-[var(--text)] mb-2">
+                Verify OTP
+              </h1>
+              <p className="text-sm text-[var(--muted)] leading-relaxed">
+                Code sent to{' '}
+                <strong className="text-[var(--text)]">
+                  +91 {phone.slice(0, 5)} {phone.slice(5)}
+                </strong>
               </p>
             </div>
 
-            <div style={S.body}>
-              <div style={{ display:'flex', gap:9, justifyContent:'center', marginBottom:22 }} onPaste={handlePaste}>
+            {/* Body */}
+            <div className="px-7 py-7">
+              {/* OTP Boxes */}
+              <div
+                className="flex gap-2.5 justify-center mb-6"
+                onPaste={handlePaste}
+              >
                 {otp.map((d, i) => (
-                  <input key={i} ref={el => boxRefs.current[i] = el}
-                    type="text" inputMode="numeric" maxLength={1} value={d}
-                    onChange={e => handleOtp(e.target.value, i)} onKeyDown={e => handleKey(e, i)}
-                    className="otp-inp"
-                    style={{ ...S.oBox, ...(d ? { borderColor:'#22c55e', background:'rgba(34,197,94,.06)' } : {}) }}/>
+                  <input
+                    key={i}
+                    ref={el => boxRefs.current[i] = el}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={d}
+                    onChange={e => handleOtpChange(e.target.value, i)}
+                    onKeyDown={e => handleOtpKey(e, i)}
+                    className={`w-12 h-14 text-center text-xl font-bold rounded-xl border outline-none transition-all text-[var(--text)] bg-[var(--inp)]
+                      ${d
+                        ? 'border-green-500 bg-green-500/5 shadow-sm shadow-green-500/20'
+                        : 'border-[var(--border)] focus:border-green-500/50 focus:shadow-sm focus:shadow-green-500/15'
+                      }`}
+                  />
                 ))}
               </div>
 
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
-                <span style={{ fontSize:13, color:'var(--muted)', fontWeight:500 }}>Didn't receive it?</span>
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <button onClick={sendOTP} disabled={timer > 0}
-                    style={{ fontSize:13, fontWeight:700, color: timer > 0 ? 'var(--muted2)' : '#22c55e', background:'none', border:'none', cursor: timer > 0 ? 'not-allowed' : 'pointer', fontFamily:'inherit' }}>
+              {/* Resend */}
+              <div className="flex items-center justify-between mb-5">
+                <span className="text-sm text-[var(--muted)] font-medium">Didn't receive it?</span>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={handleSendOTP}
+                    disabled={timer > 0}
+                    className={`text-sm font-bold transition-colors ${
+                      timer > 0
+                        ? 'text-[var(--muted2)] cursor-not-allowed'
+                        : 'text-green-500 hover:text-green-400 cursor-pointer'
+                    }`}
+                  >
                     Resend OTP
                   </button>
-                  {timer > 0 && <span style={{ fontSize:13, fontWeight:700, color:'var(--muted2)' }}>0:{String(timer).padStart(2,'0')}</span>}
+                  {timer > 0 && (
+                    <span className="text-sm font-bold text-[var(--muted2)]">
+                      0:{String(timer).padStart(2, '0')}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {error && <div style={S.err}><span>⚠</span>{error}</div>}
+              {/* Error */}
+              {error && (
+                <div className="flex items-center gap-2 bg-red-500/8 border border-red-500/20 rounded-xl px-3 py-2.5 text-sm text-red-400 mb-4">
+                  <span>⚠</span><span>{error}</span>
+                </div>
+              )}
 
-              <button onClick={verifyOTP} disabled={load || otp.some(d => !d)}
-                style={{ ...S.btn, ...(load || otp.some(d => !d) ? S.btnD : S.btnA) }}>
-                {load ? <><Spin/>Verifying...</> : 'Verify & Continue ✓'}
+              {/* Verify Button */}
+              <button
+                onClick={handleVerifyOTP}
+                disabled={load || otp.some(d => !d)}
+                className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                  load || otp.some(d => !d)
+                    ? 'bg-[var(--s2)] text-[var(--muted2)] cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-700 to-green-500 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-[1.01] active:scale-[0.99]'
+                }`}
+              >
+                {load ? <><Spinner />Verifying...</> : 'Verify & Continue ✓'}
               </button>
             </div>
           </div>
@@ -244,12 +315,18 @@ export default function AuthPage() {
 
         {/* ── SUCCESS SCREEN ── */}
         {screen === 'success' && (
-          <div className="fade" style={S.body}>
-            <div style={{ textAlign:'center', padding:'16px 0' }}>
-              <div style={{ width:68, height:68, borderRadius:'50%', background:'rgba(34,197,94,.1)', border:'.5px solid rgba(34,197,94,.25)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px', fontSize:32 }}>✓</div>
-              <h2 style={{ fontSize:21, fontWeight:800, color:'var(--text)', marginBottom:7 }}>Welcome, {name}! 👋</h2>
-              <p style={{ fontSize:14, color:'var(--muted)', marginBottom:24 }}>Verified. Setting up your account...</p>
-              <div style={{ width:28, height:28, border:'2.5px solid rgba(34,197,94,.2)', borderTopColor:'#22c55e', borderRadius:'50%', animation:'spin .7s linear infinite', margin:'0 auto' }}/>
+          <div className="fade-up px-7 py-10">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/25 flex items-center justify-center mx-auto mb-5 text-3xl">
+                ✓
+              </div>
+              <h2 className="text-xl font-black text-[var(--text)] mb-2">
+                Welcome, {name}! 👋
+              </h2>
+              <p className="text-sm text-[var(--muted)] mb-6">
+                Verified. Setting up your account...
+              </p>
+              <div className="w-7 h-7 border-[2.5px] border-green-500/20 border-t-green-500 rounded-full animate-spin mx-auto" />
             </div>
           </div>
         )}

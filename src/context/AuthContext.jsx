@@ -22,7 +22,9 @@ export function AuthProvider({ children }) {
         .then(({ data }) => setUser(data))
         .catch(() => localStorage.removeItem('cc_token'))
         .finally(() => setLoading(false))
-    } else { setLoading(false) }
+    } else {
+      setLoading(false)
+    }
   }, [])
 
   const save = (data) => {
@@ -30,8 +32,12 @@ export function AuthProvider({ children }) {
     setUser(data)
   }
 
-  const phoneLogin = async (phone, name) => {
-    const { data } = await api.post('/auth/phone-login', { phone: `+91${phone}`, name })
+  const sendOTP = async (phone) => {
+    await api.post('/auth/send-otp', { phone })
+  }
+
+  const verifyOTP = async (phone, code, name) => {
+    const { data } = await api.post('/auth/verify-otp', { phone, code, name })
     save(data)
     return data
   }
@@ -44,7 +50,7 @@ export function AuthProvider({ children }) {
   const updateUser = (u) => setUser(p => ({ ...p, ...u }))
 
   return (
-    <AuthCtx.Provider value={{ user, loading, api, phoneLogin, logout, updateUser }}>
+    <AuthCtx.Provider value={{ user, loading, api, sendOTP, verifyOTP, logout, updateUser }}>
       {children}
     </AuthCtx.Provider>
   )
